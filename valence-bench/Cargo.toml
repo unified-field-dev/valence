@@ -1,0 +1,39 @@
+[package]
+name = "valence-bench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Valence benchmark CLI (bm-v0..bm-v19)"
+publish = false
+
+[features]
+default = ["surreal-mem", "acme-stub", "sqlite", "mongodb", "indradb", "redis"]
+sqlite = ["valence-testkit/sqlite"]
+mongodb = ["valence-testkit/mongodb", "dep:valence-backend-mongodb"]
+indradb = ["valence-testkit/indradb"]
+redis = ["valence-testkit/redis", "dep:valence-backend-redis"]
+postgres = ["valence-testkit/postgres", "dep:valence-backend-postgres"]
+surreal-mem = ["valence-testkit/surreal-mem"]
+surreal-rocksdb = ["valence-testkit/surreal-rocksdb"]
+acme-stub = ["valence-testkit/acme-stub"]
+
+[[bin]]
+name = "valence-bench"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true }
+product-model-host = { path = "../examples/product-model-host" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+valence-core = { workspace = true, features = ["instrumentation"] }
+valence-backend-mem = { workspace = true }
+valence-backend-redis = { workspace = true, optional = true }
+valence-backend-mongodb = { workspace = true, optional = true }
+valence-backend-postgres = { workspace = true, optional = true }
+valence-testkit = { path = "../valence-testkit" }
+
+[lints]
+workspace = true

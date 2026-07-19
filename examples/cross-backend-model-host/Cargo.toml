@@ -1,0 +1,28 @@
+[package]
+name = "cross-backend-model-host"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+valence = { path = "../../valence", features = ["mem", "sqlite"], package = "uf-valence" }
+valence-backend-mem = { workspace = true }
+valence-backend-sqlite = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+
+[build-dependencies]
+valence-codegen = { path = "../../valence-codegen", package = "uf-valence-codegen", version = "0.1.1" }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+[lints]
+workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["async-trait", "serde", "serde_json", "valence-backend-mem", "valence-backend-sqlite"]

@@ -1,0 +1,23 @@
+[package]
+name = "uf-valence-schema-dsl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Shared syn-based valence_schema! / valence_trait_schema! DSL parser"
+documentation = "https://docs.rs/uf-valence-schema-dsl"
+keywords = ["orm", "schema", "syn", "dsl"]
+categories = ["parsing", "development-tools"]
+
+
+[lib]
+name = "valence_schema_dsl"
+
+[dependencies]
+syn = { workspace = true }
+quote = { workspace = true }
+proc-macro2 = { workspace = true }
+
+[lints]
+workspace = true

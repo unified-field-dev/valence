@@ -1,0 +1,90 @@
+---
+source: valence-codegen/src/codegen/tests/traits.rs
+expression: generated
+---
+pub trait NamedFields {
+    fn name(&self) -> &String;
+}
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct NamedModel {
+    pub id: Option<valence::RecordId>,
+    name: String,
+}
+impl NamedFields for NamedModel {
+    fn name(&self) -> &String {
+        &self.name
+    }
+}
+pub trait NamedQuery<'a>: Sized {
+    fn where_name(self, predicate: valence::StringPredicate) -> Self;
+    fn order_by_name(self, direction: valence::SortDirection) -> Self;
+    fn into_parts(self) -> (valence::QueryCore, &'a valence::Valence);
+    fn from_parts(inner: valence::QueryCore, valence: &'a valence::Valence) -> Self;
+}
+#[derive(Clone)]
+#[allow(dead_code)]
+pub struct NamedQueryAll<'a> {
+    pub inner: valence::QueryCore,
+    pub valence: &'a valence::Valence,
+}
+#[allow(dead_code)]
+impl<'a> NamedQueryAll<'a> {
+    pub fn query(valence: &'a valence::Valence) -> Self {
+        let tables = valence::TraitRegistry::global().tables_for_trait("Named");
+        let table_csv = tables.join(", ");
+        let mut core = valence::QueryCore::new(table_csv);
+        core.projection = Some(vec!["id".to_string(), "name".to_string()]);
+        Self { inner: core, valence }
+    }
+    pub fn where_name(mut self, predicate: valence::StringPredicate) -> Self {
+        self.inner = self.inner.where_string("name".to_string(), predicate);
+        self
+    }
+    pub fn order_by_name(mut self, direction: valence::SortDirection) -> Self {
+        self.inner = self.inner.order_by("name".to_string(), direction);
+        self
+    }
+    pub fn limit(mut self, limit: u32) -> Self {
+        self.inner = self.inner.limit(limit);
+        self
+    }
+    pub fn offset(mut self, offset: u32) -> Self {
+        self.inner = self.inner.offset(offset);
+        self
+    }
+    pub async fn first(self) -> valence::Result<Option<NamedModel>> {
+        let mut results = self.limit(1).await?;
+        Ok(results.pop())
+    }
+    pub fn into_parts(self) -> (valence::QueryCore, &'a valence::Valence) {
+        (self.inner, self.valence)
+    }
+    pub fn from_parts(inner: valence::QueryCore, valence: &'a valence::Valence) -> Self {
+        Self { inner, valence }
+    }
+}
+impl<'a> NamedQuery<'a> for NamedQueryAll<'a> {
+    fn where_name(mut self, predicate: valence::StringPredicate) -> Self {
+        self.inner = self.inner.where_string("name".to_string(), predicate);
+        self
+    }
+    fn order_by_name(mut self, direction: valence::SortDirection) -> Self {
+        self.inner = self.inner.order_by("name".to_string(), direction);
+        self
+    }
+    fn into_parts(self) -> (valence::QueryCore, &'a valence::Valence) {
+        (self.inner, self.valence)
+    }
+    fn from_parts(inner: valence::QueryCore, valence: &'a valence::Valence) -> Self {
+        Self { inner, valence }
+    }
+}
+impl<'a> std::future::IntoFuture for NamedQueryAll<'a> {
+    type Output = valence::Result<Vec<NamedModel>>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(async move { self.inner.execute(self.valence).await })
+    }
+}

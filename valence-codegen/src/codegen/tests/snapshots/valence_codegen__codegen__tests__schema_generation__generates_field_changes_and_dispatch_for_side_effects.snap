@@ -1,0 +1,1034 @@
+---
+source: valence-codegen/src/codegen/tests/schema_generation.rs
+expression: generated
+---
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ScoreTracker {
+    #[serde(default)]
+    id: Option<valence::RecordId>,
+    user: valence::RecordId,
+    value: i64,
+}
+/// Reference to a #struct_name for batch creation
+#[allow(dead_code)]
+pub type ScoreTrackerReference = valence::Reference<ScoreTracker>;
+#[allow(dead_code)]
+impl ScoreTracker {
+    /// Create a new #struct_name
+    pub fn new(user: valence::RecordId, value: i64) -> valence::Result<Self> {
+        Ok(Self { id: None, user, value })
+    }
+    /// Get the full static schema reference
+    pub fn get_schema() -> &'static valence::Schema {
+        ScoreTrackerSchema::full()
+    }
+    pub fn id(&self) -> Option<&valence::RecordId> {
+        self.id.as_ref()
+    }
+    pub fn user(&self) -> &valence::RecordId {
+        &self.user
+    }
+    pub fn value(&self) -> &i64 {
+        &self.value
+    }
+}
+impl valence::WithReference for ScoreTracker {}
+#[allow(dead_code)]
+impl ScoreTracker {
+    /// Raw record id for the #from_field connection (FK)
+    pub fn user_thing(&self) -> &valence::RecordId {
+        &self.user
+    }
+    /// Navigate the `#from_field` connection. Loads full target, runs read privacy.
+    pub async fn get_user(
+        &self,
+        valence: &valence::Valence,
+    ) -> valence::Result<crate::generated::User> {
+        let id = valence::connection::extract_id_from_record(&self.user)?;
+        <crate::generated::User as valence::Model>::get(&id, valence)
+            .await?
+            .ok_or_else(|| valence::Error::NotFound(
+                format!("{} {} not found", "user", id),
+            ))
+    }
+    /// Reverse: all records pointing to this target (by reference)
+    pub async fn get_from_user(
+        target: &crate::generated::User,
+        valence: &valence::Valence,
+    ) -> valence::Result<Vec<ScoreTracker>> {
+        let id = valence::connection::id_from_model(target)?;
+        Self::get_from_user_id(&id, valence).await
+    }
+    /// Reverse: all records pointing to this target (by ID)
+    pub async fn get_from_user_id(
+        target_id: &str,
+        valence: &valence::Valence,
+    ) -> valence::Result<Vec<ScoreTracker>> {
+        ScoreTracker::query(valence)
+            .where_user(
+                valence::RecordPredicate::Equals(
+                    valence::RecordId::new("user", target_id),
+                ),
+            )
+            .await
+    }
+}
+impl valence::connection::IdHolder for ScoreTracker {
+    fn record_id(&self) -> Option<&valence::RecordId> {
+        self.id()
+    }
+}
+/// Per-field before/after changes for #struct_name.
+///
+/// Each field provides a `FieldChange<T>` with `before()`, `after()`,
+/// and `has_changed()` accessors.
+#[allow(dead_code)]
+pub struct ScoreTrackerFieldChanges {
+    pub user: valence::FieldChange<valence::RecordId>,
+    pub value: valence::FieldChange<i64>,
+}
+impl ScoreTrackerFieldChanges {
+    /// Compute field changes from before/after model snapshots.
+    pub fn compute(before: Option<&ScoreTracker>, after: Option<&ScoreTracker>) -> Self {
+        Self {
+            user: valence::FieldChange::new(
+                before.map(|b| b.user().clone()),
+                after.map(|a| a.user().clone()),
+            ),
+            value: valence::FieldChange::new(
+                before.map(|b| b.value().clone()),
+                after.map(|a| a.value().clone()),
+            ),
+        }
+    }
+}
+impl ScoreTracker {
+    /// Dispatch registered side effects after a successful mutation.
+    ///
+    /// Errors are logged but do not fail the mutation.
+    async fn dispatch_side_effects(mutation: &valence::Mutation<'_, Self>) {
+        let kind_str = match mutation.kind() {
+            valence::MutationKind::Create => "create",
+            valence::MutationKind::Update => "update",
+            valence::MutationKind::Delete => "delete",
+        };
+        valence::instrumentation::record_side_effect_dispatch(
+            <Self as valence::Model>::table_name(),
+            kind_str,
+        );
+        let side_effects: Vec<Box<dyn valence::SideEffect<Self>>> = vec![
+            Box::new(ScoreNotifier) as Box < dyn valence::SideEffect < Self >>,
+            Box::new(AuditLogger) as Box < dyn valence::SideEffect < Self >>
+        ];
+        for se in &side_effects {
+            if let Err(e) = se.on_mutation(mutation).await {
+                valence::instrumentation::record_side_effect_error(
+                    <Self as valence::Model>::table_name(),
+                    &e.to_string(),
+                );
+            }
+        }
+    }
+}
+#[async_trait::async_trait]
+impl valence::Model for ScoreTracker {
+    type Schema = ScoreTrackerSchema;
+    type FieldChanges = ScoreTrackerFieldChanges;
+    fn table_name() -> &'static str {
+        "score_tracker"
+    }
+    fn schema_version() -> &'static str {
+        "0.1.0"
+    }
+    async fn get(id: &str, valence: &valence::Valence) -> valence::Result<Option<Self>> {
+        let id = id.to_string();
+        let (
+            result,
+            __bundle_status,
+        ): (Option<Self>, valence::ownership::OwnershipGateStatus) = valence::retry_on_database_tx_conflict(
+                "Model::get",
+                || {
+                    let id = id.clone();
+                    async move {
+                        let (row, bundle_status) = if valence::ownership::ownership_unified_fetch_enabled()
+                            && valence::ownership::ownership_colocate_enabled()
+                            && valence::schema::SchemaRegistry::global()
+                                .has_schema(Self::table_name())
+                        {
+                            let bundle = valence::ownership::OwnershipService::fetch_record_with_ownership_gate(
+                                    Self::table_name(),
+                                    id.as_str(),
+                                    valence,
+                                )
+                                .await?;
+                            (bundle.row, bundle.ownership_status)
+                        } else {
+                            let backend = valence
+                                .backend_for_table(<Self as valence::Model>::table_name())?;
+                            let row = valence::read_cache::get_record_via_cache(
+                                    &backend,
+                                    Self::table_name(),
+                                    id.as_str(),
+                                )
+                                .await?;
+                            (row, valence::ownership::OwnershipGateStatus::NotFetched)
+                        };
+                        let result = match row {
+                            None => None,
+                            Some(v) => {
+                                Some(
+                                    serde_json::from_value(v)
+                                        .map_err(|e| {
+                                            valence::Error::Serialization(e.to_string())
+                                        })?,
+                                )
+                            }
+                        };
+                        Ok((result, bundle_status))
+                    }
+                },
+            )
+            .await?;
+        if let Some(record) = &result {
+            let __bare = valence::ownership::normalize_record_id_for_ownership(
+                id.as_str(),
+            );
+            if __bundle_status == valence::ownership::OwnershipGateStatus::NotFetched {
+                valence::ownership::OwnershipService::check_privacy_with_pending_gate(
+                        record.check_read_privacy(valence),
+                        Self::table_name(),
+                        &__bare,
+                        valence,
+                    )
+                    .await?;
+            } else {
+                valence::ownership::OwnershipService::check_privacy_with_bundled_gate(
+                        record.check_read_privacy(valence),
+                        Self::table_name(),
+                        &__bare,
+                        __bundle_status,
+                    )
+                    .await?;
+            }
+        }
+        Ok(result)
+    }
+    async fn create(data: Self, valence: &valence::Valence) -> valence::Result<Self> {
+        data.check_create_privacy(valence).await?;
+        let record = serde_json::to_value(&data)
+            .map_err(|e| valence::Error::Serialization(e.to_string()))?;
+        Self::__assert_unique_constraints_for_record(&record, None, valence).await?;
+        let created: Self = valence::retry_on_database_tx_conflict(
+                "Model::create",
+                || {
+                    let record = record.clone();
+                    async move {
+                        let backend = valence
+                            .backend_for_table(<Self as valence::Model>::table_name())?;
+                        let row = backend
+                            .create_record(Self::table_name(), record)
+                            .await?;
+                        serde_json::from_value(row)
+                            .map_err(|e| valence::Error::Serialization(e.to_string()))
+                    }
+                },
+            )
+            .await?;
+        created.__ensure_ownership_after_write(valence).await?;
+        if let Some(__rid) = created.id() {
+            valence::read_cache::invalidate(
+                <Self as valence::Model>::table_name(),
+                __rid.id(),
+            );
+        }
+        {
+            let field_changes = ScoreTrackerFieldChanges::compute(None, Some(&created));
+            let mutation = valence::Mutation::new(
+                valence::MutationKind::Create,
+                None,
+                Some(created.clone()),
+                field_changes,
+                valence,
+            );
+            Self::dispatch_side_effects(&mutation).await;
+        }
+        Ok(created)
+    }
+    async fn update(
+        id: &str,
+        data: Self,
+        valence: &valence::Valence,
+    ) -> valence::Result<Self> {
+        Self::update_with_before(id, data, None, valence).await
+    }
+    async fn delete(id: &str, valence: &valence::Valence) -> valence::Result<()> {
+        let before_snapshot = match Self::get(id, valence).await {
+            Ok(s) => s,
+            Err(valence::Error::PendingDeletion(_)) => return Ok(()),
+            Err(e) => return Err(e),
+        };
+        if let Some(ref existing) = before_snapshot {
+            existing.check_delete_privacy(valence).await?;
+        } else {
+            return Ok(());
+        }
+        let __bare = valence::ownership::normalize_record_id_for_ownership(id);
+        let dag = valence::deletion::dag::DeletionDag::compute(
+                Self::table_name(),
+                &__bare,
+                valence,
+            )
+            .await?;
+        if !dag.restrict_violations.is_empty() {
+            return Err(
+                valence::Error::Validation(
+                    format!(
+                        "delete restricted by schema connections: {:?}", dag
+                        .restrict_violations
+                    ),
+                ),
+            );
+        }
+        if before_snapshot.is_some() {
+            let __bare = valence::ownership::normalize_record_id_for_ownership(id);
+            valence::ownership::OwnershipService::mark_pending_deletion(
+                    Self::table_name(),
+                    &__bare,
+                    valence,
+                )
+                .await?;
+        }
+        let actor_json = serde_json::to_value(valence.actor())
+            .unwrap_or(serde_json::Value::Null);
+        let run_id = valence::deletion::DeletionService::create_run(
+                Self::table_name(),
+                &__bare,
+                actor_json.clone(),
+                valence,
+            )
+            .await?;
+        valence::deletion::dispatch(valence::deletion::DeletionRequest {
+                run_id,
+                root_table: Self::table_name().to_string(),
+                root_record_id: __bare,
+                actor_json,
+            })
+            .await?;
+        Ok(())
+    }
+    async fn upsert(
+        id: &str,
+        data: Self,
+        valence: &valence::Valence,
+    ) -> valence::Result<Self> {
+        data.check_create_privacy(valence).await?;
+        let record = serde_json::to_value(&data)
+            .map_err(|e| valence::Error::Serialization(e.to_string()))?;
+        Self::__assert_unique_constraints_for_record(&record, Some(id), valence).await?;
+        let before_snapshot = Self::get(id, valence).await?;
+        let id = id.to_string();
+        let upserted: Self = valence::retry_on_database_tx_conflict(
+                "Model::upsert",
+                || {
+                    let id = id.clone();
+                    let record = record.clone();
+                    async move {
+                        let backend = valence
+                            .backend_for_table(<Self as valence::Model>::table_name())?;
+                        let row = backend
+                            .upsert_record(Self::table_name(), id.as_str(), record)
+                            .await?;
+                        serde_json::from_value(row)
+                            .map_err(|e| valence::Error::Serialization(e.to_string()))
+                    }
+                },
+            )
+            .await?;
+        if before_snapshot.is_none() {
+            upserted.__ensure_ownership_after_write(valence).await?;
+        }
+        {
+            let kind = if before_snapshot.is_some() {
+                valence::MutationKind::Update
+            } else {
+                valence::MutationKind::Create
+            };
+            let field_changes = ScoreTrackerFieldChanges::compute(
+                before_snapshot.as_ref(),
+                Some(&upserted),
+            );
+            let mutation = valence::Mutation::new(
+                kind,
+                before_snapshot,
+                Some(upserted.clone()),
+                field_changes,
+                valence,
+            );
+            Self::dispatch_side_effects(&mutation).await;
+        }
+        if let Some(__rid) = upserted.id() {
+            valence::read_cache::invalidate(
+                <Self as valence::Model>::table_name(),
+                __rid.id(),
+            );
+        }
+        Ok(upserted)
+    }
+    async fn merge(
+        id: &str,
+        patch: serde_json::Value,
+        valence: &valence::Valence,
+    ) -> valence::Result<Self> {
+        let before_snapshot = Self::get(id, valence).await?;
+        let Some(ref existing) = before_snapshot else {
+            return Err(
+                valence::Error::NotFound(format!("{}:{}", Self::table_name(), id)),
+            );
+        };
+        existing.check_update_privacy(valence).await?;
+        let patch_for_db = match &patch {
+            serde_json::Value::Object(obj) if obj.is_empty() => {
+                return Ok(existing.clone());
+            }
+            serde_json::Value::Object(_) => patch.clone(),
+            _ => {
+                return Err(
+                    valence::Error::Validation(
+                        "Model::merge expects a JSON object patch".into(),
+                    ),
+                );
+            }
+        };
+        let mut merged_json = serde_json::to_value(existing)
+            .map_err(|e| valence::Error::Serialization(e.to_string()))?;
+        if let serde_json::Value::Object(ref patch_obj) = patch_for_db {
+            if let serde_json::Value::Object(ref mut base) = merged_json {
+                for (k, v) in patch_obj {
+                    base.insert(k.clone(), v.clone());
+                }
+            } else {
+                return Err(
+                    valence::Error::Internal(
+                        "Model::merge: failed to merge into record JSON".into(),
+                    ),
+                );
+            }
+        }
+        Self::__assert_unique_constraints_for_record(&merged_json, Some(id), valence)
+            .await?;
+        let proposed: Self = serde_json::from_value(merged_json)
+            .map_err(|e| valence::Error::Serialization(e.to_string()))?;
+        proposed.check_update_privacy(valence).await?;
+        let id = id.to_string();
+        let merged: Self = valence::retry_on_database_tx_conflict(
+                "Model::merge",
+                || {
+                    let id = id.clone();
+                    let patch_for_db = patch_for_db.clone();
+                    async move {
+                        let backend = valence
+                            .backend_for_table(<Self as valence::Model>::table_name())?;
+                        let row = backend
+                            .merge_record(Self::table_name(), id.as_str(), patch_for_db)
+                            .await?;
+                        serde_json::from_value(row)
+                            .map_err(|e| valence::Error::Serialization(e.to_string()))
+                    }
+                },
+            )
+            .await?;
+        {
+            let field_changes = ScoreTrackerFieldChanges::compute(
+                before_snapshot.as_ref(),
+                Some(&merged),
+            );
+            let mutation = valence::Mutation::new(
+                valence::MutationKind::Update,
+                before_snapshot,
+                Some(merged.clone()),
+                field_changes,
+                valence,
+            );
+            Self::dispatch_side_effects(&mutation).await;
+        }
+        if let Some(__rid) = merged.id() {
+            valence::read_cache::invalidate(
+                <Self as valence::Model>::table_name(),
+                __rid.id(),
+            );
+        }
+        Ok(merged)
+    }
+}
+impl ScoreTracker {
+    fn __schema_metadata() -> &'static valence::SchemaMetadataStruct {
+        valence::SchemaRegistry::global()
+            .get_schema("score_tracker")
+            .expect(concat!("SchemaRegistry missing entry for ", "score_tracker"))
+    }
+    async fn __assert_unique_constraints_for_record(
+        record: &serde_json::Value,
+        excluding_id: Option<&str>,
+        valence: &valence::Valence,
+    ) -> valence::Result<()> {
+        for field_name in Self::__unique_field_names() {
+            let Some(value) = record.get(field_name) else {
+                continue;
+            };
+            if value.is_null() {
+                continue;
+            }
+            Self::__assert_unique_field_value(field_name, value, excluding_id, valence)
+                .await?;
+        }
+        Ok(())
+    }
+    fn __unique_field_names() -> &'static [&'static str] {
+        &[]
+    }
+    async fn __assert_unique_field_value(
+        field_name: &str,
+        field_value: &serde_json::Value,
+        excluding_id: Option<&str>,
+        valence: &valence::Valence,
+    ) -> valence::Result<()> {
+        valence
+            .ensure_unique_field_index(
+                <Self as valence::Model>::table_name(),
+                field_name,
+            )
+            .await?;
+        let compiled = valence::__internal::CompiledQuery {
+            query_string: format!(
+                "SELECT VALUE id FROM {} WHERE {} = $value LIMIT 2", < Self as
+                valence::Model > ::table_name(), field_name,
+            ),
+            params: vec![("value".to_string(), field_value.clone())],
+        };
+        let matches: Vec<serde_json::Value> = valence::retry_on_database_tx_conflict(
+                "Model::__assert_unique_field_value",
+                || {
+                    let compiled = compiled.clone();
+                    async move {
+                        let backend = valence
+                            .backend_for_table(<Self as valence::Model>::table_name())?;
+                        backend.execute_compiled_query(&compiled).await
+                    }
+                },
+            )
+            .await?;
+        for row in matches {
+            let matched_id = valence::extract_id_from_select_value(&row)
+                .map_err(|e| {
+                    valence::Error::Internal(
+                        format!("Failed to parse unique check ID: {}", e),
+                    )
+                })?;
+            if excluding_id.is_some_and(|id| id == matched_id) {
+                continue;
+            }
+            return Err(
+                valence::Error::Validation(
+                    format!(
+                        "Unique constraint violation on {}.{}", < Self as valence::Model
+                        > ::table_name(), field_name
+                    ),
+                ),
+            );
+        }
+        Ok(())
+    }
+    async fn check_read_privacy(
+        &self,
+        valence: &valence::Valence,
+    ) -> valence::Result<()> {
+        let record = serde_json::json!(self);
+        valence::PrivacyEvaluator::check_entity_access(
+                Self::__schema_metadata(),
+                valence::PrivacyOperation::Read,
+                &record,
+                valence,
+            )
+            .await
+    }
+    async fn check_create_privacy(
+        &self,
+        valence: &valence::Valence,
+    ) -> valence::Result<()> {
+        let record = serde_json::json!(self);
+        valence::PrivacyEvaluator::check_entity_access(
+                Self::__schema_metadata(),
+                valence::PrivacyOperation::Create,
+                &record,
+                valence,
+            )
+            .await
+    }
+    async fn check_update_privacy(
+        &self,
+        valence: &valence::Valence,
+    ) -> valence::Result<()> {
+        let record = serde_json::json!(self);
+        valence::PrivacyEvaluator::check_entity_access(
+                Self::__schema_metadata(),
+                valence::PrivacyOperation::Update,
+                &record,
+                valence,
+            )
+            .await
+    }
+    async fn check_delete_privacy(
+        &self,
+        valence: &valence::Valence,
+    ) -> valence::Result<()> {
+        let record = serde_json::json!(self);
+        valence::PrivacyEvaluator::check_entity_access(
+                Self::__schema_metadata(),
+                valence::PrivacyOperation::Delete,
+                &record,
+                valence,
+            )
+            .await
+    }
+    /// Update an existing record, optionally skipping the pre-update fetch when the caller
+    /// already holds the authoritative row (e.g. `get_mutable().commit()`).
+    pub async fn update_with_before(
+        id: &str,
+        data: Self,
+        before: Option<Self>,
+        valence: &valence::Valence,
+    ) -> valence::Result<Self> {
+        data.check_update_privacy(valence).await?;
+        let record = serde_json::to_value(&data)
+            .map_err(|e| valence::Error::Serialization(e.to_string()))?;
+        Self::__assert_unique_constraints_for_record(&record, Some(id), valence).await?;
+        let before_snapshot = match before {
+            Some(existing) => {
+                existing.check_update_privacy(valence).await?;
+                Some(existing)
+            }
+            None => {
+                let fetched = <Self as valence::Model>::get(id, valence).await?;
+                if let Some(ref existing) = fetched {
+                    existing.check_update_privacy(valence).await?;
+                }
+                fetched
+            }
+        };
+        let id = id.to_string();
+        let updated: Self = valence::retry_on_database_tx_conflict(
+                "Model::update",
+                || {
+                    let id = id.clone();
+                    let record = record.clone();
+                    async move {
+                        let backend = valence
+                            .backend_for_table(<Self as valence::Model>::table_name())?;
+                        let row = backend
+                            .update_record(
+                                <Self as valence::Model>::table_name(),
+                                id.as_str(),
+                                record,
+                            )
+                            .await?;
+                        serde_json::from_value(row)
+                            .map_err(|e| valence::Error::Serialization(e.to_string()))
+                    }
+                },
+            )
+            .await?;
+        if let Some(__rid) = updated.id() {
+            valence::read_cache::invalidate(
+                <Self as valence::Model>::table_name(),
+                __rid.id(),
+            );
+        }
+        {
+            let field_changes = ScoreTrackerFieldChanges::compute(
+                before_snapshot.as_ref(),
+                Some(&updated),
+            );
+            let mutation = valence::Mutation::new(
+                valence::MutationKind::Update,
+                before_snapshot,
+                Some(updated.clone()),
+                field_changes,
+                valence,
+            );
+            Self::dispatch_side_effects(&mutation).await;
+        }
+        Ok(updated)
+    }
+}
+#[allow(dead_code)]
+impl ScoreTracker {
+    pub(crate) async fn __ensure_ownership_after_write(
+        &self,
+        valence: &valence::Valence,
+    ) -> valence::Result<()> {
+        let __rec_id = self
+            .id()
+            .ok_or_else(|| {
+                valence::Error::Validation(
+                    format!("{}: record has no id after write", "score_tracker",),
+                )
+            })?;
+        let __key = __rec_id.id().to_string();
+        let __bare = valence::ownership::normalize_record_id_for_ownership(&__key);
+        let __payload = serde_json::to_value(self)
+            .map_err(|e| valence::Error::Serialization(e.to_string()))?;
+        let __owner: valence::OwnerRef = if let Some(o) = valence.owner_override() {
+            o.clone()
+        } else if false {
+            valence::OwnerRef::system()
+        } else {
+            valence::OwnerRef::from_actor(valence.actor())
+        };
+        valence::ownership::OwnershipService::ensure_active_ownership(
+                "score_tracker",
+                &__bare,
+                __owner,
+                valence,
+            )
+            .await
+    }
+}
+#[async_trait::async_trait]
+impl valence::BatchCreatable for ScoreTracker {
+    fn table_name() -> &'static str {
+        "score_tracker"
+    }
+    fn set_id(&mut self, id: valence::RecordId) {
+        self.id = Some(id);
+    }
+    async fn ensure_ownership_after_batch_create(
+        created_row: serde_json::Value,
+        valence: &valence::Valence,
+    ) -> valence::Result<()> {
+        let row: Self = serde_json::from_value(created_row)
+            .map_err(|e| valence::Error::Serialization(e.to_string()))?;
+        row.__ensure_ownership_after_write(valence).await
+    }
+}
+/// Mutable builder for #struct_name.
+///
+/// Holds a `&Valence` reference and the entity ID so that
+/// `commit().await` can persist changes without a separate
+/// `Model::update()` call.
+#[allow(dead_code)]
+pub struct ScoreTrackerMutable<'a> {
+    model: ScoreTracker,
+    valence: &'a valence::Valence,
+    id: Option<String>,
+    user: Option<valence::RecordId>,
+    value: Option<i64>,
+}
+#[allow(dead_code)]
+impl<'a> ScoreTrackerMutable<'a> {
+    /// Create a new mutable builder from a model and valence instance.
+    pub fn new(model: ScoreTracker, valence: &'a valence::Valence) -> Self {
+        let id = model.id().map(|r| r.id().to_string());
+        Self {
+            model,
+            valence,
+            id,
+            user: None,
+            value: None,
+        }
+    }
+    /// Load entity from DB directly as mutable.
+    pub async fn get(id: &str, valence: &'a valence::Valence) -> valence::Result<Self> {
+        let model = <ScoreTracker as valence::Model>::get(id, valence)
+            .await?
+            .ok_or_else(|| valence::Error::Validation(
+                format!("Entity not found: {}:{}", "score_tracker", id),
+            ))?;
+        Ok(Self::new(model, valence))
+    }
+    pub fn set_user(mut self, value: valence::RecordId) -> valence::Result<Self> {
+        self.user = Some(value);
+        Ok(self)
+    }
+    pub fn set_value(mut self, value: i64) -> valence::Result<Self> {
+        self.value = Some(value);
+        Ok(self)
+    }
+    pub fn user_has_change(&self) -> bool {
+        self.user.is_some()
+    }
+    pub fn value_has_change(&self) -> bool {
+        self.value.is_some()
+    }
+    /// Apply changes locally without persisting to the database.
+    pub fn build(mut self) -> ScoreTracker {
+        if let Some(val) = &self.user {
+            self.model.user = val.clone();
+        }
+        if let Some(val) = &self.value {
+            self.model.value = val.clone();
+        }
+        self.model
+    }
+    /// Apply changes and persist to the database.
+    pub async fn commit(self) -> valence::Result<ScoreTracker> {
+        let id = self
+            .id
+            .clone()
+            .ok_or_else(|| valence::Error::Validation(
+                "Cannot commit: model has no ID".to_string(),
+            ))?;
+        let valence = self.valence;
+        let before = self.model.clone();
+        let data = self.build();
+        ScoreTracker::update_with_before(&id, data, Some(before), valence).await
+    }
+}
+impl ScoreTracker {
+    /// Get a mutable builder for this model.
+    pub fn get_mutable<'a>(
+        &self,
+        valence: &'a valence::Valence,
+    ) -> ScoreTrackerMutable<'a> {
+        ScoreTrackerMutable::new(self.clone(), valence)
+    }
+}
+impl ScoreTracker {
+    /// Start a type-safe query
+    pub fn query(valence: &valence::Valence) -> ScoreTrackerQuery<'_> {
+        ScoreTrackerQuery {
+            inner: valence::QueryCore::new("score_tracker".to_string()),
+            valence,
+        }
+    }
+}
+/// Query builder for #struct_name
+#[derive(Clone)]
+#[allow(dead_code)]
+pub struct ScoreTrackerQuery<'a> {
+    pub inner: valence::QueryCore,
+    valence: &'a valence::Valence,
+}
+#[allow(dead_code)]
+impl<'a> ScoreTrackerQuery<'a> {
+    pub fn where_id(mut self, predicate: valence::StringPredicate) -> Self {
+        self.inner = self.inner.where_string("id".to_string(), predicate);
+        self
+    }
+    pub fn where_user(mut self, predicate: valence::RecordPredicate) -> Self {
+        self.inner = self.inner.where_record("user".to_string(), predicate);
+        self
+    }
+    pub fn where_value(mut self, predicate: valence::IntPredicate) -> Self {
+        self.inner = self.inner.where_int("value".to_string(), predicate);
+        self
+    }
+    /// Filter where the connected `#from_field` record matches the subquery.
+    pub fn where_user_has_results<F>(mut self, f: F) -> Self
+    where
+        F: FnOnce(valence::QueryCore) -> valence::QueryCore,
+    {
+        let base = valence::QueryCore::new("user".to_string());
+        let sub = f(base);
+        self.inner = self
+            .inner
+            .where_connection_exists("user".to_string(), "user".to_string(), sub);
+        self
+    }
+    /// Hop to the connected `#from_field` record (HasOne).
+    /// Switches the result type from this model to the target model.
+    pub fn query_user(self) -> crate::generated::UserQuery<'a> {
+        let valence = self.valence;
+        let source = self.inner;
+        let mut target = valence::QueryCore::new("user".to_string());
+        target.hop_source = Some(valence::HopSource {
+            source_query: Box::new(source),
+            hop_type: valence::HopType::HasOneForward {
+                fk_field: "user".to_string(),
+            },
+        });
+        crate::generated::UserQuery {
+            inner: target,
+            valence,
+        }
+    }
+    pub fn order_by_id(mut self, direction: valence::SortDirection) -> Self {
+        self.inner = self.inner.order_by("id".to_string(), direction);
+        self
+    }
+    pub fn order_by_user(mut self, direction: valence::SortDirection) -> Self {
+        self.inner = self.inner.order_by("user".to_string(), direction);
+        self
+    }
+    pub fn order_by_value(mut self, direction: valence::SortDirection) -> Self {
+        self.inner = self.inner.order_by("value".to_string(), direction);
+        self
+    }
+    pub async fn distinct_id(self) -> valence::Result<Vec<String>> {
+        self.inner.distinct_values("id", self.valence).await
+    }
+    /// OR-combine another query's conditions with this one.
+    /// Returns rows matching *either* set of WHERE conditions.
+    pub fn union(mut self, other: Self) -> Self {
+        self.inner = self.inner.union_with(other.inner);
+        self
+    }
+    /// AND-combine another query's conditions with this one.
+    /// Returns rows matching *both* sets of WHERE conditions.
+    pub fn join(mut self, other: Self) -> Self {
+        self.inner = self.inner.join_with(other.inner);
+        self
+    }
+    /// Limit the number of returned rows
+    pub fn limit(mut self, limit: u32) -> Self {
+        self.inner = self.inner.limit(limit);
+        self
+    }
+    /// Skip the first `offset` rows
+    pub fn offset(mut self, offset: u32) -> Self {
+        self.inner = self.inner.offset(offset);
+        self
+    }
+    /// Execute the query and return the first result, or `None`
+    pub async fn first(self) -> valence::Result<Option<ScoreTracker>> {
+        let mut results = self.limit(1).await?;
+        Ok(results.pop())
+    }
+}
+impl<'a> std::future::IntoFuture for ScoreTrackerQuery<'a> {
+    type Output = valence::Result<Vec<ScoreTracker>>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(async move { self.inner.execute(self.valence).await })
+    }
+}
+/// Schema metadata for #struct_name - zero-heap scalar access
+#[allow(dead_code)]
+pub struct ScoreTrackerSchema;
+#[allow(dead_code)]
+impl ScoreTrackerSchema {
+    /// Table name (zero allocation)
+    pub const fn name() -> &'static str {
+        "score_tracker"
+    }
+    /// Schema version (zero allocation)
+    pub const fn version() -> &'static str {
+        "0.1.0"
+    }
+    /// Table name for database operations (zero allocation)
+    pub const fn table_name() -> &'static str {
+        "score_tracker"
+    }
+    /// Human-readable description (zero allocation)
+    pub const fn description() -> Option<&'static str> {
+        Some("Test entity with side effects")
+    }
+    /// Privacy read level (zero allocation)
+    pub const fn privacy_read() -> &'static str {
+        "public"
+    }
+    /// Privacy write level (zero allocation)
+    pub const fn privacy_write() -> &'static str {
+        "service"
+    }
+    /// Full schema with all fields, edges, and policies
+    /// Constructed once on first access, then cached statically
+    pub fn full() -> &'static valence::Schema {
+        use std::sync::OnceLock;
+        static SCHEMA: OnceLock<valence::Schema> = OnceLock::new();
+        SCHEMA
+            .get_or_init(|| {
+                let __valence_db_eval: &'static dyn valence::DatabaseEvaluator = &valence::DEFAULT_IN_MEMORY;
+                valence::Schema {
+                    name: Self::name().to_string(),
+                    version: Self::version().to_string(),
+                    database_evaluator: __valence_db_eval,
+                    databases: vec![__valence_db_eval.name().to_string()],
+                    privacy: valence::SchemaPrivacy {
+                        read: Self::privacy_read().to_string(),
+                        write: Self::privacy_write().to_string(),
+                    },
+                    policies: None,
+                    fields: vec![
+                        valence::SchemaField { name : "id".to_string(), field_type :
+                        "string".to_string(), primary : true, nullable : false, indexed :
+                        false, unique : false, default : None, fk : None, validations :
+                        Vec::new(), policies : None, encrypted : false, enum_variants :
+                        Vec::new(), enum_type : None, }, valence::SchemaField { name :
+                        "user".to_string(), field_type : "record(user)".to_string(),
+                        primary : false, nullable : false, indexed : false, unique :
+                        false, default : None, fk : Some(valence::ForeignKeyRef {
+                        ref_table : "user".to_string(), field : "id".to_string(), }),
+                        validations : Vec::new(), policies : None, encrypted : false,
+                        enum_variants : Vec::new(), enum_type : None, },
+                        valence::SchemaField { name : "value".to_string(), field_type :
+                        "integer".to_string(), primary : false, nullable : false, indexed
+                        : false, unique : false, default : None, fk : None, validations :
+                        Vec::new(), policies : None, encrypted : false, enum_variants :
+                        Vec::new(), enum_type : None, }
+                    ],
+                    edges: vec![
+                        valence::SchemaEdge { from_field : "user".to_string(), to_table :
+                        "user".to_string(), label : "User".to_string(), }
+                    ],
+                    connections: vec![
+                        valence::SchemaConnection { name : "user".to_string(), from_table
+                        : "score_tracker".to_string(), from_field : "user".to_string(),
+                        to_table : "user".to_string(), cardinality : "HasOne"
+                        .to_string(), required : true, on_delete : "Cascade".to_string(),
+                        label : "User".to_string(), model_path : None, reverse_field :
+                        None, edge_table : None, target_trait : None, }
+                    ],
+                    side_effects: vec![
+                        "ScoreNotifier".to_string(), "AuditLogger".to_string()
+                    ],
+                    iters: Vec::new(),
+                    composite_key: Vec::new(),
+                    traits: Vec::new(),
+                    ttl: None,
+                    ownership: None,
+                    meta: valence::SchemaMeta {
+                        retention: "365 days".to_string(),
+                        row_count: 0,
+                        owner: "system".to_string(),
+                        description: Some("Test entity with side effects".to_string()),
+                    },
+                }
+            })
+    }
+    /// Lightweight schema metadata for registry lookups
+    pub fn metadata() -> &'static valence::SchemaMetadataStruct {
+        use std::sync::OnceLock;
+        static METADATA: OnceLock<valence::SchemaMetadataStruct> = OnceLock::new();
+        let m = METADATA
+            .get_or_init(|| {
+                let schema = Self::full();
+                valence::SchemaMetadataStruct {
+                    table_name: schema.name.as_str(),
+                    version: schema.version.as_str(),
+                    description: schema.meta.description.as_deref(),
+                    privacy_read: schema.privacy.read.as_str(),
+                    privacy_write: schema.privacy.write.as_str(),
+                    databases: schema.databases.as_slice(),
+                    schema,
+                }
+            });
+        m
+    }
+}
+impl valence::SchemaMetadata for ScoreTracker {
+    type SchemaMetadata = valence::Schema;
+    fn schema_metadata() -> &'static Self::SchemaMetadata {
+        ScoreTrackerSchema::full()
+    }
+}
+#[cfg(not(target_family = "wasm"))]
+const _: () = {
+    fn __valence_schema_metadata_init() -> &'static valence::SchemaMetadataStruct {
+        ScoreTrackerSchema::metadata()
+    }
+    valence::inventory::submit! {
+        valence::SchemaMetadataInit(__valence_schema_metadata_init)
+    }
+};

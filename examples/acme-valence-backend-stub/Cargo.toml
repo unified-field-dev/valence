@@ -1,0 +1,19 @@
+[package]
+name = "acme-valence-backend-stub"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Example third-party Valence storage adapter (matrix acme-stub row)"
+
+[dependencies]
+async-trait = { workspace = true }
+serde_json = { workspace = true }
+valence-core = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+valence-testkit = { path = "../../valence-testkit", default-features = false, features = ["acme-stub"] }
+
+[lints]
+workspace = true

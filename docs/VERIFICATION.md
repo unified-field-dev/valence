@@ -1,0 +1,60 @@
+# Documentation verification baseline
+
+Re-run after test or CI changes.
+
+## Commands
+
+### Tests
+
+```bash
+# Full workspace tests
+cargo test --workspace
+
+# Matrix E2E
+cargo test -p valence-e2e
+
+# Codegen / model runtime subset
+cargo test -p valence-e2e --test admin_runtime_catalog
+cargo test -p valence-e2e --test model_runtime_catalog
+cargo test -p codegen-host --test compile_generated_models
+cargo test -p product-model-host --test model_contract
+
+# Extended (RocksDB matrix)
+export VALENCE_BENCH_ROCKSDB=1
+cargo test -p valence-e2e --features surreal-rocksdb -- --ignored
+```
+
+### Examples and docs
+
+```bash
+RUSTDOCFLAGS="-D warnings" cargo doc -p uf-valence --all-features --no-deps
+cargo test --doc -p uf-valence-core -p uf-valence
+cargo run -p uf-valence --example quickstart --features mem
+cargo run -p uf-valence --example quickstart_sqlite --features sqlite
+cargo run -p uf-valence --example quickstart_indradb --features indradb
+cargo run -p uf-valence --example surreal_embedded --features surreal
+```
+
+## Line coverage (CI artifact)
+
+PR CI runs a non-blocking [`coverage`](../.github/workflows/ci.yml) job with `cargo-llvm-cov`:
+
+```bash
+cargo install cargo-llvm-cov
+
+cargo llvm-cov --workspace \
+  --exclude valence-e2e --exclude valence-bench \
+  --features mem,surreal-mem \
+  --summary-only
+
+cargo llvm-cov --workspace \
+  --exclude valence-e2e --exclude valence-bench \
+  --features mem,surreal-mem \
+  --lcov --output-path lcov.info
+```
+
+Download `coverage-lcov` from GitHub Actions run artifacts for the CI report.
+
+**Baseline (2026-07-08):** ~55% line coverage on the scoped workspace slice above (`mem,surreal-mem` features, excluding `valence-e2e` / `valence-bench`).
+
+Extended tag CI: [`.github/workflows/ci-extended.yml`](../.github/workflows/ci-extended.yml).

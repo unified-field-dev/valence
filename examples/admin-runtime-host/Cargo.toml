@@ -1,0 +1,18 @@
+[package]
+name = "admin-runtime-host"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Example: admin runtime APIs without UI"
+
+[dependencies]
+minimal-schema = { path = "../minimal-schema" }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+valence = { path = "../../valence", features = ["mem"], package = "uf-valence" }
+
+[package.metadata.cargo-machete]
+ignored = ["minimal-schema"]
+
+[lints]
+workspace = true

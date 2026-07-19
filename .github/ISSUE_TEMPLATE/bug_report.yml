@@ -1,0 +1,36 @@
+name: Bug report
+description: Report a defect in Valence or a published uf-valence* crate
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. For security issues, see `SECURITY.md` instead of this form.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps or a small code snippet.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Crate / version
+      description: e.g. uf-valence 0.1.1, git SHA, or workspace path
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true

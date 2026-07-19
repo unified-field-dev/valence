@@ -1,0 +1,54 @@
+[package]
+name = "valence-testkit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Valence matrix bootstrap, backend contract, and scenario catalog"
+repository.workspace = true
+homepage.workspace = true
+
+[features]
+default = ["surreal-mem", "acme-stub", "sqlite", "mongodb", "indradb", "redis"]
+sqlite = ["dep:valence-backend-sqlite", "valence-core/compiler-sql"]
+postgres = ["dep:valence-backend-postgres", "valence-core/compiler-sql"]
+mongodb = ["dep:valence-backend-mongodb", "valence-core/compiler-mongodb"]
+indradb = ["dep:valence-backend-indradb", "valence-core/compiler-indradb"]
+redis = ["dep:valence-backend-redis", "valence-core/compiler-redis"]
+cross-backend-hops = ["sqlite", "dep:cross-backend-model-host"]
+surreal-mem = [
+    "dep:valence-backend-surreal",
+    "valence-backend-surreal/embedded-mem",
+    "valence-backend-surreal/instrumentation",
+    "valence-core/compiler-surreal",
+]
+surreal-rocksdb = ["surreal-mem", "valence-backend-surreal/embedded-rocksdb"]
+surreal-inventory = ["surreal-mem", "valence-backend-surreal/inventory"]
+acme-stub = ["dep:acme-valence-backend-stub"]
+
+[dependencies]
+acme-valence-backend-stub = { path = "../examples/acme-valence-backend-stub", optional = true }
+cross-backend-model-host = { path = "../examples/cross-backend-model-host", optional = true }
+hop-pair-model-host = { path = "../examples/hop-pair-model-host" }
+hop-chain-model-host = { path = "../examples/hop-chain-model-host" }
+minimal-schema = { path = "../examples/minimal-schema" }
+product-model-host = { path = "../examples/product-model-host" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true }
+valence-backend-indradb = { workspace = true, optional = true }
+valence-backend-mem = { workspace = true }
+valence-backend-mongodb = { workspace = true, optional = true }
+valence-backend-postgres = { workspace = true, optional = true }
+valence-backend-redis = { workspace = true, optional = true }
+valence-backend-sqlite = { workspace = true, optional = true }
+valence-backend-surreal = { workspace = true, optional = true, default-features = false }
+valence-core = { workspace = true, features = ["instrumentation", "compiler-sql"] }
+valence-telemetry = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+[lints]
+workspace = true

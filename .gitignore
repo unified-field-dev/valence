@@ -1,0 +1,11 @@
+/target/
+/target-*/
+**/target/
+**/target-*/
+**/*.rs.bk
+.DS_Store
+infra/aws/campaign/instances.env
+profiling/
+
+# Local Sentrux quality-gate config (dev artifact; not part of upstream)
+.sentrux/

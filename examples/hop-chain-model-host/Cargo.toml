@@ -1,0 +1,24 @@
+[package]
+name = "hop-chain-model-host"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Org→Project→Task→Note chain across hop_a..hop_d engines"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+valence = { path = "../../valence", features = ["mem"], package = "uf-valence" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+
+[build-dependencies]
+valence-codegen = { path = "../../valence-codegen", package = "uf-valence-codegen", version = "0.1.1" }
+
+[lints]
+workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["async-trait", "serde", "serde_json"]
