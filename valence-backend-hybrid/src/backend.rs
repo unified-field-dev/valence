@@ -22,7 +22,12 @@ use crate::write_through;
 /// Stable engine slug for router keys (`hybrid_indra_sql:logical_name`).
 pub const ENGINE_ID: &str = KnownEngines::HYBRID_INDRA_SQL;
 
-/// Schema evaluator const for `database:` routing.
+/// Schema evaluator const for `database:` routing (`primary` is the logical name in the key).
+///
+/// Hosts typically also register the same [`HybridBackend`] under application logical names
+/// such as `default`, `billing`, or `jobs` via
+/// [`valence_core::register_backend_logical_names_slices`]. Sharing one backend across those
+/// keys is intentional: one Indra mirror, one primary, and one shared cache.
 pub const PRIMARY: DatabaseFromEngine = Database::from_engine("primary", ENGINE_ID);
 
 /// Postgres/SQL primary with an embedded IndraDB read-through cache for records and edges.
@@ -193,14 +198,7 @@ impl DatabaseBackend for HybridBackend {
     }
 
     async fn delete_record(&self, table: &str, id: &str) -> Result<()> {
-        write_through::delete_record(
-            &self.primary,
-            &self.mirror,
-            &self.records,
-            table,
-            id,
-        )
-        .await
+        write_through::delete_record(&self.primary, &self.mirror, &self.records, table, id).await
     }
 
     async fn relate_edge(&self, from: &RecordId, edge_table: &str, to: &RecordId) -> Result<()> {
@@ -216,12 +214,7 @@ impl DatabaseBackend for HybridBackend {
         .await
     }
 
-    async fn unrelate_edge(
-        &self,
-        from: &RecordId,
-        edge_table: &str,
-        to: &RecordId,
-    ) -> Result<()> {
+    async fn unrelate_edge(&self, from: &RecordId, edge_table: &str, to: &RecordId) -> Result<()> {
         write_through::unrelate_edge(
             &self.primary,
             &self.mirror,

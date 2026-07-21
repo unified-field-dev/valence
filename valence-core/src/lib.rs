@@ -67,6 +67,7 @@ pub mod query_compiler_registry;
 pub mod read_cache;
 pub mod record_id;
 pub mod reference;
+pub mod register_logical;
 pub mod registry;
 pub mod request_cache;
 pub mod router;
@@ -147,6 +148,10 @@ pub use read_cache::{
 };
 pub use record_id::RecordId;
 pub use reference::{Reference, ReferencedEntity, WithReference};
+pub use register_logical::{
+    register_backend_logical_names, register_backend_logical_names_slices,
+    RegisterBackendLogicalNamesOptions,
+};
 pub use request_cache::RequestPermissionCache;
 pub use router::DatabaseRouter;
 pub use router_key::router_key;

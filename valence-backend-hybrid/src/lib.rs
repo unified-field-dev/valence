@@ -8,6 +8,16 @@
 //! - [`CacheRules`] / [`CachePolicy`] — cache selection
 //! - [`HybridBackend`] — `DatabaseBackend` implementation
 //!
+//! ## Multi-logical registration
+//!
+//! One [`HybridBackend`] instance may be registered under several logical names via
+//! [`valence_core::register_backend_logical_names`] /
+//! [`valence_core::register_backend_logical_names_slices`]. That shares a single Indra mirror,
+//! primary, and record/edge cache across keys such as `hybrid_indra_sql:default` and
+//! `hybrid_indra_sql:billing` — intentional (same `Arc`). Schema routing still uses
+//! [`PRIMARY`] (`logical_name` `"primary"`) as the evaluator const; hosts choose
+//! which logical names to register at boot.
+//!
 //! # Examples
 //!
 //! Capacity `0` disables that cache class:
@@ -43,7 +53,5 @@ mod write_through;
 
 pub use backend::{HybridBackend, ENGINE_ID, PRIMARY};
 pub use builder::HybridBackendBuilder;
-pub use cache_policy::{
-    CachePolicy, CacheRules, DEFAULT_EDGE_CAPACITY, DEFAULT_RECORD_CAPACITY,
-};
+pub use cache_policy::{CachePolicy, CacheRules, DEFAULT_EDGE_CAPACITY, DEFAULT_RECORD_CAPACITY};
 pub use hop_exec::{HybridHopBody, HybridHopPlan};

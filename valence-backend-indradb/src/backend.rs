@@ -156,7 +156,7 @@ impl IndradbBackend {
         exclude_id: Option<&str>,
     ) -> Result<()> {
         let indexes = self.unique_indexes.read().await.clone();
-        for ((idx_table, field), values) in indexes.iter() {
+        for ((idx_table, field), values) in &indexes {
             if idx_table != table {
                 continue;
             }

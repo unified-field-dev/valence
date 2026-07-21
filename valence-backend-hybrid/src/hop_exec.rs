@@ -50,9 +50,7 @@ pub struct HybridHopBody {
 /// Returns `None` when the string is ordinary SQL.
 pub fn parse_hop_plan(query_string: &str) -> Option<HybridHopPlan> {
     let value: Value = serde_json::from_str(query_string.trim()).ok()?;
-    if value.get("hybrid_hop").is_none() {
-        return None;
-    }
+    value.get("hybrid_hop")?;
     serde_json::from_value(value).ok()
 }
 
@@ -87,8 +85,8 @@ pub async fn execute_hop_plan(
     let mut target_ids: HashSet<(String, String)> = HashSet::new();
     for source_id in source_ids {
         let from = RecordId::new(&source_table, source_id);
-        let targets = resolve_edge_targets(primary, mirror, edges, policy, &from, &body.edge_table)
-            .await?;
+        let targets =
+            resolve_edge_targets(primary, mirror, edges, policy, &from, &body.edge_table).await?;
         for target in targets {
             if target.table() == body.target_table || body.target_table.is_empty() {
                 target_ids.insert((target.table().to_string(), target.id().to_string()));
@@ -154,9 +152,7 @@ async fn get_target_record(
     crate::telemetry::record_cache_miss("record");
     let row = primary.get_record(table, id).await?;
     if let Some(ref body) = row {
-        let _ = records
-            .put(mirror, policy, table, id, body.clone())
-            .await;
+        let _ = records.put(mirror, policy, table, id, body.clone()).await;
     }
     Ok(row)
 }
@@ -188,4 +184,3 @@ fn guess_source_table(sql: &str) -> String {
         .trim_matches(|c| c == '`' || c == '"' || c == '\'')
         .to_string()
 }
-

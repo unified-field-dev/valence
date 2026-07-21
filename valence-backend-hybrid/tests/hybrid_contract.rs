@@ -2,9 +2,12 @@
 
 use std::sync::Arc;
 
-use valence_backend_hybrid::{CacheRules, HybridBackend};
+use valence_backend_hybrid::{CacheRules, HybridBackend, ENGINE_ID};
 use valence_backend_mem::InMemoryBackend;
-use valence_core::{DatabaseBackend, RecordId};
+use valence_core::{
+    register_backend_logical_names, router_key, DatabaseBackend, DatabaseRouter, RecordId,
+    RegisterBackendLogicalNamesOptions,
+};
 
 async fn hybrid_over_mem() -> HybridBackend {
     HybridBackend::builder()
@@ -23,7 +26,10 @@ async fn read_through_populates_mirror() {
         .await
         .expect("create");
     let row = hybrid.get_record("counter", "a").await.expect("get");
-    assert_eq!(row.and_then(|v| v.get("n").cloned()), Some(serde_json::json!(1)));
+    assert_eq!(
+        row.and_then(|v| v.get("n").cloned()),
+        Some(serde_json::json!(1))
+    );
     // Second get should hit the mirror path (still correct).
     let row2 = hybrid.get_record("counter", "a").await.expect("get2");
     assert!(row2.is_some());
@@ -43,7 +49,11 @@ async fn write_through_update_and_delete() {
     let row = hybrid.get_record("counter", "u").await.expect("get");
     assert_eq!(row.unwrap().get("n"), Some(&serde_json::json!(2)));
     hybrid.delete_record("counter", "u").await.expect("delete");
-    assert!(hybrid.get_record("counter", "u").await.expect("get").is_none());
+    assert!(hybrid
+        .get_record("counter", "u")
+        .await
+        .expect("get")
+        .is_none());
 }
 
 #[tokio::test]
@@ -110,6 +120,56 @@ async fn edge_dual_write_and_get_targets() {
 }
 
 #[tokio::test]
+async fn multi_logical_registration_shares_backend_crud_and_edges() {
+    let hybrid = HybridBackend::builder()
+        .primary(Arc::new(InMemoryBackend::new()))
+        .warm_edges(false)
+        .build()
+        .await
+        .expect("build hybrid");
+    let backend: Arc<dyn DatabaseBackend> = Arc::new(hybrid);
+    let mut router = DatabaseRouter::new();
+    register_backend_logical_names(
+        &mut router,
+        Arc::clone(&backend),
+        &["default", "billing"],
+        RegisterBackendLogicalNamesOptions::default(),
+    );
+    let default_key = router_key("default", ENGINE_ID);
+    let billing_key = router_key("billing", ENGINE_ID);
+    let via_default = router.resolve(&default_key).expect("default");
+    let via_billing = router.resolve(&billing_key).expect("billing");
+    assert!(Arc::ptr_eq(&via_default, &via_billing));
+
+    via_default
+        .create_record("org", serde_json::json!({"id": "o1"}))
+        .await
+        .expect("create org");
+    via_billing
+        .create_record("project", serde_json::json!({"id": "p1"}))
+        .await
+        .expect("create project");
+    let row = via_billing
+        .get_record("org", "o1")
+        .await
+        .expect("get via billing");
+    assert!(row.is_some());
+
+    let from = RecordId::new("org", "o1");
+    let to = RecordId::new("project", "p1");
+    via_default
+        .relate_edge(&from, "org_projects", &to)
+        .await
+        .expect("relate");
+    let targets = via_billing
+        .get_edge_targets(&from, "org_projects")
+        .await
+        .expect("targets");
+    assert_eq!(targets.len(), 1);
+    assert_eq!(targets[0].id(), "p1");
+}
+
+#[tokio::test]
 async fn record_lru_evicts_oldest() {
     let hybrid = HybridBackend::builder()
         .primary(Arc::new(InMemoryBackend::new()))
@@ -132,5 +192,9 @@ async fn record_lru_evicts_oldest() {
     let _ = hybrid.get_record("counter", "k2").await;
     // Primary still has all three.
     // Mirror may have evicted k0; get_record still succeeds via primary read-through.
-    assert!(hybrid.get_record("counter", "k0").await.expect("get").is_some());
+    assert!(hybrid
+        .get_record("counter", "k0")
+        .await
+        .expect("get")
+        .is_some());
 }

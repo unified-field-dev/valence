@@ -93,7 +93,10 @@ impl EdgeCache {
             let Some(to) = record_id_from_parts(row.get("to_table"), row.get("to_id")) else {
                 continue;
             };
-            by_type.entry(edge_type.to_string()).or_default().push((from, to));
+            by_type
+                .entry(edge_type.to_string())
+                .or_default()
+                .push((from, to));
         }
 
         for (edge_table, edges) in by_type {

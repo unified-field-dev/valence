@@ -90,7 +90,13 @@ async fn measure_compiled_query(
     let depth = ctx.sweep.prefill.max(1_000).min(10_000);
     prefill_table(Arc::clone(&backend), &table, depth).await?;
     let compiled = CompiledQuery::new(format!("SELECT * FROM {table} LIMIT 100"), vec![]);
-    Ok(run_query_loop(backend, &compiled, ctx.sweep.query_iters.max(50), ctx.warmup).await?)
+    Ok(run_query_loop(
+        backend,
+        &compiled,
+        ctx.sweep.query_iters.max(50),
+        ctx.warmup,
+    )
+    .await?)
 }
 
 /// Same-backend M2M hop: source org → edge → project targets.

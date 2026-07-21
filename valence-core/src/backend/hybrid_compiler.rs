@@ -49,7 +49,7 @@ impl QueryCompiler for HybridQueryCompiler {
         }
         #[cfg(feature = "compiler-sql")]
         {
-            return SqlQueryCompiler.compile(core);
+            SqlQueryCompiler.compile(core)
         }
         #[cfg(not(feature = "compiler-sql"))]
         {

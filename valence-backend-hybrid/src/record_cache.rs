@@ -1,6 +1,6 @@
 //! Record-body LRU metadata layered over the IndraDB mirror.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::sync::Mutex;
 
 use serde_json::Value;
@@ -21,7 +21,7 @@ struct RecordLruState {
     /// Recency queue: front = oldest, back = newest.
     queue: VecDeque<(String, String)>,
     /// Fast membership for `(table, id)`.
-    present: HashMap<(String, String), ()>,
+    present: HashSet<(String, String)>,
 }
 
 impl RecordCache {
@@ -80,12 +80,7 @@ impl RecordCache {
     /// # Errors
     ///
     /// Propagates IndraDB delete errors.
-    pub async fn invalidate(
-        &self,
-        mirror: &IndradbBackend,
-        table: &str,
-        id: &str,
-    ) -> Result<()> {
+    pub async fn invalidate(&self, mirror: &IndradbBackend, table: &str, id: &str) -> Result<()> {
         self.remove_key(table, id);
         mirror.delete_record(table, id).await
     }
@@ -94,7 +89,7 @@ impl RecordCache {
     fn touch(&self, table: &str, id: &str) {
         let key = (table.to_string(), id.to_string());
         let mut state = self.order.lock().unwrap_or_else(|e| e.into_inner());
-        if state.present.insert(key.clone(), ()).is_some() {
+        if !state.present.insert(key.clone()) {
             if let Some(pos) = state.queue.iter().position(|k| k == &key) {
                 state.queue.remove(pos);
             }

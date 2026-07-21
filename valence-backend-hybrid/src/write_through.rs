@@ -162,10 +162,7 @@ async fn soft_put_record(
     let Some(id) = storage_id_from_content(row) else {
         return;
     };
-    if let Err(err) = records
-        .put(mirror, policy, table, &id, row.clone())
-        .await
-    {
+    if let Err(err) = records.put(mirror, policy, table, &id, row.clone()).await {
         let _ = err;
         crate::telemetry::record_mirror_soft_failure("put_record");
         let _ = records.invalidate(mirror, table, &id).await;

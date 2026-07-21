@@ -68,6 +68,10 @@ name = "multi_backend"
 required-features = ["mem"]
 
 [[example]]
+name = "hybrid_multi_logical"
+required-features = ["hybrid", "mem"]
+
+[[example]]
 name = "quickstart_sqlite"
 required-features = ["sqlite"]
 

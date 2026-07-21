@@ -7,8 +7,8 @@ use valence_core::ports::endpoints::{DatabaseEndpointResolver, EnvEndpointResolv
 use valence_core::router::DatabaseRouter;
 use valence_core::router_key::router_key;
 use valence_core::{
-    DatabaseBackend, Result, RouterValenceFactory, RouterValenceFactoryConfig, Valence,
-    ValenceBuilder, ValenceFactory,
+    register_backend_logical_names, DatabaseBackend, RegisterBackendLogicalNamesOptions, Result,
+    RouterValenceFactory, RouterValenceFactoryConfig, Valence, ValenceBuilder, ValenceFactory,
 };
 use valence_telemetry::{
     install_telemetry_sink, ConsoleSink, NoOpSink, RecordingSink, TelemetrySink,
@@ -33,6 +33,7 @@ pub enum BootstrapMode {
 /// Bootstraps a Valence stack for one matrix row.
 pub struct BootstrapSession {
     matrix: MatrixSpec,
+    #[cfg(feature = "surreal-mem")]
     bootstrap_mode: BootstrapMode,
     logical_names: Vec<String>,
     router: Option<Arc<DatabaseRouter>>,
@@ -44,6 +45,7 @@ pub struct BootstrapSession {
     env_guard: Option<EnvGuard>,
     wire_options: Option<WireBackendOptions>,
     ready: bool,
+    #[cfg(feature = "surreal-mem")]
     temp_dir: Option<tempfile::TempDir>,
 }
 
@@ -52,6 +54,7 @@ impl BootstrapSession {
     pub fn new(matrix: MatrixSpec) -> Self {
         Self {
             matrix,
+            #[cfg(feature = "surreal-mem")]
             bootstrap_mode: BootstrapMode::default(),
             logical_names: vec!["default".to_string()],
             router: None,
@@ -63,6 +66,7 @@ impl BootstrapSession {
             env_guard: None,
             wire_options: None,
             ready: false,
+            #[cfg(feature = "surreal-mem")]
             temp_dir: None,
         }
     }
@@ -202,18 +206,11 @@ impl BootstrapSession {
     }
 
     fn build_mem_router(&self) -> Result<(Arc<DatabaseRouter>, String)> {
-        use valence_backend_mem::{InMemoryBackend, ENGINE_ID};
+        use valence_backend_mem::InMemoryBackend;
 
         let backend: Arc<dyn DatabaseBackend> = Arc::new(InMemoryBackend::new());
         let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
-        let mut router = DatabaseRouter::new();
-        let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());
-        for name in &self.logical_names {
-            let key = router_key(name, ENGINE_ID);
-            router.register(key, Arc::clone(&backend));
-        }
-        let default_key = router_key(default_logical, ENGINE_ID);
-        Ok((Arc::new(router), default_key))
+        Ok(self.finish_shared_backend_router(backend, "default"))
     }
 
     async fn build_sqlite_router(&self) -> Result<(Arc<DatabaseRouter>, String)> {
@@ -226,7 +223,7 @@ impl BootstrapSession {
 
         #[cfg(feature = "sqlite")]
         {
-            use valence_backend_sqlite::{SqliteBackend, ENGINE_ID};
+            use valence_backend_sqlite::SqliteBackend;
 
             let backend: Arc<dyn DatabaseBackend> = Arc::new(
                 SqliteBackend::connect_memory()
@@ -234,14 +231,7 @@ impl BootstrapSession {
                     .map_err(|e| valence_core::Error::Internal(e.to_string()))?,
             );
             let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
-            let mut router = DatabaseRouter::new();
-            let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());
-            for name in &self.logical_names {
-                let key = router_key(name, ENGINE_ID);
-                router.register(key, Arc::clone(&backend));
-            }
-            let default_key = router_key(default_logical, ENGINE_ID);
-            Ok((Arc::new(router), default_key))
+            Ok(self.finish_shared_backend_router(backend, "default"))
         }
     }
 
@@ -255,7 +245,7 @@ impl BootstrapSession {
 
         #[cfg(feature = "postgres")]
         {
-            use valence_backend_postgres::{PostgresBackendBuilder, ENGINE_ID};
+            use valence_backend_postgres::PostgresBackendBuilder;
 
             let builder = self
                 .wire_options
@@ -270,14 +260,7 @@ impl BootstrapSession {
                     .map_err(|e| valence_core::Error::Internal(e.to_string()))?,
             );
             let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
-            let mut router = DatabaseRouter::new();
-            let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());
-            for name in &self.logical_names {
-                let key = router_key(name, ENGINE_ID);
-                router.register(key, Arc::clone(&backend));
-            }
-            let default_key = router_key(default_logical, ENGINE_ID);
-            Ok((Arc::new(router), default_key))
+            Ok(self.finish_shared_backend_router(backend, "default"))
         }
     }
 
@@ -291,7 +274,7 @@ impl BootstrapSession {
 
         #[cfg(feature = "mongodb")]
         {
-            use valence_backend_mongodb::{MongoBackendBuilder, ENGINE_ID};
+            use valence_backend_mongodb::MongoBackendBuilder;
 
             let builder = self
                 .wire_options
@@ -306,20 +289,14 @@ impl BootstrapSession {
                     .map_err(|e| valence_core::Error::Internal(e.to_string()))?,
             );
             let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
-            let mut router = DatabaseRouter::new();
-            let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());
-            for name in &self.logical_names {
-                let key = router_key(name, ENGINE_ID);
-                router.register(key, Arc::clone(&backend));
-            }
-            let default_key = router_key(default_logical, ENGINE_ID);
-            Ok((Arc::new(router), default_key))
+            Ok(self.finish_shared_backend_router(backend, "default"))
         }
     }
 
     fn build_indradb_router(&self) -> Result<(Arc<DatabaseRouter>, String)> {
         #[cfg(not(feature = "indradb"))]
         {
+            let _ = self;
             return Err(valence_core::Error::Internal(
                 "enable valence-testkit/indradb".into(),
             ));
@@ -327,18 +304,11 @@ impl BootstrapSession {
 
         #[cfg(feature = "indradb")]
         {
-            use valence_backend_indradb::{IndradbBackend, ENGINE_ID};
+            use valence_backend_indradb::IndradbBackend;
 
             let backend: Arc<dyn DatabaseBackend> = Arc::new(IndradbBackend::new());
             let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
-            let mut router = DatabaseRouter::new();
-            let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());
-            for name in &self.logical_names {
-                let key = router_key(name, ENGINE_ID);
-                router.register(key, Arc::clone(&backend));
-            }
-            let default_key = router_key(default_logical, ENGINE_ID);
-            Ok((Arc::new(router), default_key))
+            Ok(self.finish_shared_backend_router(backend, "default"))
         }
     }
 
@@ -352,7 +322,7 @@ impl BootstrapSession {
 
         #[cfg(feature = "hybrid")]
         {
-            use valence_backend_hybrid::{HybridBackend, ENGINE_ID};
+            use valence_backend_hybrid::HybridBackend;
             use valence_backend_postgres::PostgresBackendBuilder;
 
             let builder = self
@@ -375,14 +345,7 @@ impl BootstrapSession {
                 .map_err(|e| valence_core::Error::Internal(e.to_string()))?;
             let backend: Arc<dyn DatabaseBackend> = Arc::new(hybrid);
             let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
-            let mut router = DatabaseRouter::new();
-            let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());
-            for name in &self.logical_names {
-                let key = router_key(name, ENGINE_ID);
-                router.register(key, Arc::clone(&backend));
-            }
-            let default_key = router_key(default_logical, ENGINE_ID);
-            Ok((Arc::new(router), default_key))
+            Ok(self.finish_shared_backend_router(backend, "default"))
         }
     }
 
@@ -396,7 +359,7 @@ impl BootstrapSession {
 
         #[cfg(feature = "redis")]
         {
-            use valence_backend_redis::{RedisBackendBuilder, ENGINE_ID};
+            use valence_backend_redis::RedisBackendBuilder;
 
             let backend: Arc<dyn DatabaseBackend> = if let Some(fleet_builder) = self
                 .wire_options
@@ -425,14 +388,7 @@ impl BootstrapSession {
                 )
             };
             let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
-            let mut router = DatabaseRouter::new();
-            let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());
-            for name in &self.logical_names {
-                let key = router_key(name, ENGINE_ID);
-                router.register(key, Arc::clone(&backend));
-            }
-            let default_key = router_key(default_logical, ENGINE_ID);
-            Ok((Arc::new(router), default_key))
+            Ok(self.finish_shared_backend_router(backend, "default"))
         }
     }
 
@@ -515,6 +471,7 @@ impl BootstrapSession {
     fn build_acme_router(&self) -> Result<(Arc<DatabaseRouter>, String)> {
         #[cfg(not(feature = "acme-stub"))]
         {
+            let _ = self;
             Err(valence_core::Error::Internal(
                 "enable valence-testkit/acme-stub".into(),
             ))
@@ -522,19 +479,35 @@ impl BootstrapSession {
 
         #[cfg(feature = "acme-stub")]
         {
-            use acme_valence_backend_stub::{AcmeStubBackend, ENGINE_ID};
+            use acme_valence_backend_stub::AcmeStubBackend;
 
             let backend: Arc<dyn DatabaseBackend> = Arc::new(AcmeStubBackend::new());
             let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
-            let mut router = DatabaseRouter::new();
-            let default_logical = self.logical_names.first().map_or("primary", |s| s.as_str());
-            for name in &self.logical_names {
-                let key = router_key(name, ENGINE_ID);
-                router.register(key, Arc::clone(&backend));
-            }
-            let default_key = router_key(default_logical, ENGINE_ID);
-            Ok((Arc::new(router), default_key))
+            Ok(self.finish_shared_backend_router(backend, "primary"))
         }
+    }
+
+    /// Register one shared backend under every configured logical name.
+    fn finish_shared_backend_router(
+        &self,
+        backend: Arc<dyn DatabaseBackend>,
+        default_logical_fallback: &str,
+    ) -> (Arc<DatabaseRouter>, String) {
+        let engine_id = backend.engine_id();
+        let default_logical = self
+            .logical_names
+            .first()
+            .map_or(default_logical_fallback, |s| s.as_str());
+        let names: Vec<&str> = self.logical_names.iter().map(|s| s.as_str()).collect();
+        let mut router = DatabaseRouter::new();
+        register_backend_logical_names(
+            &mut router,
+            backend,
+            &names,
+            RegisterBackendLogicalNamesOptions::default(),
+        );
+        let default_key = router_key(default_logical, engine_id);
+        (Arc::new(router), default_key)
     }
 
     /// Set env var for endpoint scenarios (restored on session drop).

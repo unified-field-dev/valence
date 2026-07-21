@@ -117,11 +117,7 @@ pub async fn get_record_with_ownership_bundle_via_cache(
         v,
     )
     .await?;
-    instrumentation::record_ownership_fetch_mode(if hybrid {
-        "unified_hybrid"
-    } else {
-        "unified"
-    });
+    instrumentation::record_ownership_fetch_mode(if hybrid { "unified_hybrid" } else { "unified" });
 
     if read_cache_enabled() && !hybrid {
         global_cache().insert(cache_key(table, id), bundle.clone());
