@@ -29,7 +29,7 @@ Executive summary of Valence ORM / storage-adapter capacity experiments. Methodo
 | RQ-VI2 | Index type matrix (B-tree / hash / unique / partial / JSON / FTS)? | *future* |
 | RQ-VI3 | Write-path cost of maintaining indexes? | *future* |
 | RQ-VI4 | When does an index stop helping (selectivity / prefill)? | *future* |
-| RQ-VC1 | Dedicated cache layer vs Valence read cache (bm-v20)? | *future* |
+| RQ-VC1 | Hybrid IndraDB cache + Postgres primary (get / query / hop)? | **bm-v26** |
 | RQ-VC2 | Distributed shared cache under multi-client load? | *future* |
 | RQ-VC3 | Cache invalidation / TTL vs stale reads and write amp? | *future* |
 | RQ-VC4 | Index + cache together vs either alone? | *future* |
@@ -208,10 +208,32 @@ Not implemented yet. Explore **after** release ceiling curves exist so levers ar
 
 | ID | Question | Likely shape later |
 |----|----------|--------------------|
-| RQ-VC1 | Dedicated cache in front of the adapter vs Valence read cache (bm-v20 on/off)? | Hot-key get hammer |
+| RQ-VC1 | Hybrid IndraDB+Postgres vs postgres vs indradb (get / query / hop)? | **bm-v26** / `hybrid-compare` slice — AWS `--release` |
 | RQ-VC2 | Distributed shared cache under multi-client load? | bm-v7-style clients + shared Redis/Memcached in front of one DB |
 | RQ-VC3 | Invalidation / TTL vs stale reads and write amplification? | Get hammer + merge/delete under TTL modes |
 | RQ-VC4 | Index + cache together vs either alone on filtered queries? | Factorial: bare / index / cache / both |
+
+### bm-v26 hybrid hypothesis (AWS `--release`)
+
+| Track | Expected winner | Hybrid target |
+|-------|-----------------|---------------|
+| Get-by-id p95 | indradb | near-indradb (IndraDB mirror) |
+| Compiled query p95 | postgres | near-postgres (SQL passthrough) |
+| M2M hop / edge fan-out p95 | indradb | near-indradb (mirror edges) |
+
+Numbers land below after the AWS campaign (`scripts/aws-e2e-bench.sh --bench hybrid-compare`).
+
+### Hybrid compare (bm-v26) — AWS `c6i.xlarge` `--release`
+
+Source: `profiling/valence-bench/reports/aws/bm-v26-*.json` (2026-07-21 campaign).
+
+| Storage | get p95 ms | query p95 ms | hop p95 ms |
+|---------|------------|--------------|------------|
+| hybrid | **0.003** | **0.519** | **0.252** |
+| postgres | 0.492 | 0.525 | 16.796 |
+| indradb | 0.002 | 13.453 | 0.087 |
+
+**Verdict:** hypothesis holds — hybrid get/hop track near IndraDB; compiled query tracks Postgres (~67× faster than IndraDB on this cell). Hop fan-out is ~67× faster than Postgres on the same host.
 
 ### Escalation triggers — when to consider these
 

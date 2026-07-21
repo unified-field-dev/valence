@@ -209,6 +209,7 @@ async fn run_matrix_slice(args: &MatrixArgs, wire: WireBackendOptions) -> Result
         "query-real" => vec!["bm-v21", "bm-v22", "bm-v23"],
         "hop-pairs" => vec!["bm-v24"],
         "hop-chains" => vec!["bm-v25"],
+        "hybrid-compare" => vec!["bm-v26"],
         other => bail!("unknown matrix slice: {other}"),
     };
 

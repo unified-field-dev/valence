@@ -5621,6 +5621,7 @@ version = "0.1.1"
 dependencies = [
  "surrealdb",
  "tokio",
+ "uf-valence-backend-hybrid",
  "uf-valence-backend-indradb",
  "uf-valence-backend-mem",
  "uf-valence-backend-mongodb",
@@ -5631,6 +5632,20 @@ dependencies = [
  "uf-valence-core",
  "uf-valence-macros",
  "uf-valence-telemetry",
+]
+
+[[package]]
+name = "uf-valence-backend-hybrid"
+version = "0.1.1"
+dependencies = [
+ "async-trait",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uf-valence-backend-indradb",
+ "uf-valence-backend-mem",
+ "uf-valence-core",
+ "valence-testkit",
 ]
 
 [[package]]
@@ -5705,6 +5720,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "thiserror",
  "tokio",
  "uf-valence-core",
  "uuid",
@@ -5797,7 +5813,6 @@ name = "uf-valence-telemetry"
 version = "0.1.1"
 dependencies = [
  "serde_json",
- "tracing",
 ]
 
 [[package]]
@@ -5934,6 +5949,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "uf-valence-backend-hybrid",
  "uf-valence-backend-mem",
  "uf-valence-backend-mongodb",
  "uf-valence-backend-postgres",
@@ -5965,6 +5981,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "uf-valence-backend-hybrid",
  "uf-valence-backend-indradb",
  "uf-valence-backend-mem",
  "uf-valence-backend-mongodb",

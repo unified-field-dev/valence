@@ -94,6 +94,7 @@ impl BenchReport {
     pub fn bench_topology_for(matrix: &MatrixSpec) -> String {
         match matrix.storage {
             valence_testkit::StorageAdapter::Postgres
+            | valence_testkit::StorageAdapter::HybridIndraPg
             | valence_testkit::StorageAdapter::MongoDb
             | valence_testkit::StorageAdapter::Redis => "remote".into(),
             _ => "embedded".into(),

@@ -37,8 +37,11 @@ Entry script: [`scripts/aws-e2e-bench.sh`](../scripts/aws-e2e-bench.sh).
 # Bench slices
 ./scripts/aws-e2e-bench.sh --bench read-hammer
 ./scripts/aws-e2e-bench.sh --bench hop-pairs
+./scripts/aws-e2e-bench.sh --bench hybrid-compare   # bm-v26: hybrid vs postgres vs indradb
 ./scripts/aws-e2e-bench.sh --bench all
 ```
+
+For published comparative numbers set `VALENCE_BENCH_RELEASE=1` (enabled by `deploy-and-run.sh hybrid-compare`).
 
 Reports land under `profiling/valence-bench/reports/` with `bench_topology: aws` and `VALENCE_BENCH_HARDWARE`.
 

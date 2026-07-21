@@ -193,6 +193,7 @@ impl BootstrapSession {
             StorageAdapter::Postgres => self.build_postgres_router().await,
             StorageAdapter::MongoDb => self.build_mongodb_router().await,
             StorageAdapter::IndraDb => self.build_indradb_router(),
+            StorageAdapter::HybridIndraPg => self.build_hybrid_router().await,
             StorageAdapter::Redis => self.build_redis_router().await,
             StorageAdapter::SurrealMem => self.build_surreal_router(false).await,
             StorageAdapter::SurrealRocksdb => self.build_surreal_router(true).await,
@@ -329,6 +330,50 @@ impl BootstrapSession {
             use valence_backend_indradb::{IndradbBackend, ENGINE_ID};
 
             let backend: Arc<dyn DatabaseBackend> = Arc::new(IndradbBackend::new());
+            let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
+            let mut router = DatabaseRouter::new();
+            let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());
+            for name in &self.logical_names {
+                let key = router_key(name, ENGINE_ID);
+                router.register(key, Arc::clone(&backend));
+            }
+            let default_key = router_key(default_logical, ENGINE_ID);
+            Ok((Arc::new(router), default_key))
+        }
+    }
+
+    async fn build_hybrid_router(&self) -> Result<(Arc<DatabaseRouter>, String)> {
+        #[cfg(not(feature = "hybrid"))]
+        {
+            return Err(valence_core::Error::Internal(
+                "enable valence-testkit/hybrid".into(),
+            ));
+        }
+
+        #[cfg(feature = "hybrid")]
+        {
+            use valence_backend_hybrid::{HybridBackend, ENGINE_ID};
+            use valence_backend_postgres::PostgresBackendBuilder;
+
+            let builder = self
+                .wire_options
+                .as_ref()
+                .and_then(|o| o.postgres.clone())
+                .unwrap_or_else(PostgresBackendBuilder::new);
+            let primary = Arc::new(
+                builder
+                    .from_env_defaults()
+                    .build()
+                    .await
+                    .map_err(|e| valence_core::Error::Internal(e.to_string()))?,
+            );
+            let hybrid = HybridBackend::builder()
+                .primary(primary)
+                .warm_edges(true)
+                .build()
+                .await
+                .map_err(|e| valence_core::Error::Internal(e.to_string()))?;
+            let backend: Arc<dyn DatabaseBackend> = Arc::new(hybrid);
             let backend = maybe_wrap_backend(backend, self.matrix.telemetry);
             let mut router = DatabaseRouter::new();
             let default_logical = self.logical_names.first().map_or("default", |s| s.as_str());

@@ -1,0 +1,30 @@
+[package]
+name = "uf-valence-backend-hybrid"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Hybrid IndraDB cache + SQL primary DatabaseBackend for Valence"
+documentation = "https://docs.rs/uf-valence-backend-hybrid"
+keywords = ["orm", "graph", "cache", "postgres", "database"]
+categories = ["database"]
+
+[lib]
+name = "valence_backend_hybrid"
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+valence-backend-indradb = { workspace = true }
+valence-core = { workspace = true, features = ["compiler-hybrid", "compiler-sql"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+valence-backend-mem = { workspace = true }
+valence-testkit = { path = "../valence-testkit", default-features = false }
+
+[lints]
+workspace = true

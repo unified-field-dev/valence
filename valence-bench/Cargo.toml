@@ -13,6 +13,7 @@ mongodb = ["valence-testkit/mongodb", "dep:valence-backend-mongodb"]
 indradb = ["valence-testkit/indradb"]
 redis = ["valence-testkit/redis", "dep:valence-backend-redis"]
 postgres = ["valence-testkit/postgres", "dep:valence-backend-postgres"]
+hybrid = ["valence-testkit/hybrid", "dep:valence-backend-hybrid", "postgres"]
 surreal-mem = ["valence-testkit/surreal-mem"]
 surreal-rocksdb = ["valence-testkit/surreal-rocksdb"]
 acme-stub = ["valence-testkit/acme-stub"]
@@ -33,6 +34,7 @@ valence-backend-mem = { workspace = true }
 valence-backend-redis = { workspace = true, optional = true }
 valence-backend-mongodb = { workspace = true, optional = true }
 valence-backend-postgres = { workspace = true, optional = true }
+valence-backend-hybrid = { workspace = true, optional = true }
 valence-testkit = { path = "../valence-testkit" }
 
 [lints]

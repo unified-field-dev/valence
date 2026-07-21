@@ -6,8 +6,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Local/WSL defaults to 1; AWS campaign hosts typically leave this unset or raise it.
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
 export VALENCE_BENCH_HARDWARE="${VALENCE_BENCH_HARDWARE:-aws-unset}"
+# Set VALENCE_BENCH_RELEASE=1 for capacity / published comparative numbers.
+RELEASE_FLAG=()
+if [[ "${VALENCE_BENCH_RELEASE:-}" == "1" || "${VALENCE_BENCH_RELEASE:-}" == "true" ]]; then
+  RELEASE_FLAG=(--release)
+fi
 
 DRY_RUN=0
 DO_E2E=0
@@ -20,7 +26,7 @@ Usage: aws-e2e-bench.sh [--dry-run] [--e2e] [--bench SLICE|all]
   --dry-run   Print expected tests/experiments and env presence; exit 0
   --e2e       Run cargo test -p valence-e2e -- --test-threads=1
   --bench S   Run matrix slice (read-hammer|query-real|hop-pairs|hop-chains|
-              adapter-minimal|write-sweep|query-depth|overhead|all)
+              hybrid-compare|adapter-minimal|write-sweep|query-depth|overhead|all)
 EOF
 }
 
@@ -52,7 +58,7 @@ echo "  cross_backend_hops (depth-2 Cartesian + chain depths)"
 
 echo "== expected bench slices =="
 echo "  adapter-minimal write-sweep query-depth overhead"
-echo "  read-hammer query-real hop-pairs hop-chains"
+echo "  read-hammer query-real hop-pairs hop-chains hybrid-compare"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "dry-run complete"
@@ -62,7 +68,7 @@ fi
 # Wire / rocksdb adapters need explicit crate features (env alone is not enough).
 AWS_EXTRA_FEATURES=()
 if [[ -n "${DATABASE_URL:-}" ]]; then
-  AWS_EXTRA_FEATURES+=("postgres")
+  AWS_EXTRA_FEATURES+=("postgres" "hybrid")
 fi
 if [[ "${VALENCE_BENCH_ROCKSDB:-}" == "1" ]]; then
   AWS_EXTRA_FEATURES+=("surreal-rocksdb")
@@ -134,7 +140,7 @@ run_slice() {
   export CARGO_TARGET_DIR=target-valence-bench
   local storages="mem,sqlite,surreal-mem,indradb"
   if [[ -n "${DATABASE_URL:-}" ]]; then
-    storages+=",postgres"
+    storages+=",postgres,hybrid"
   fi
   if [[ -n "${VALENCE_MONGODB_URI:-}" ]]; then
     storages+=",mongodb"
@@ -145,13 +151,21 @@ run_slice() {
   if [[ "${VALENCE_BENCH_ROCKSDB:-}" == "1" ]]; then
     storages+=",surreal-rocksdb"
   fi
+  # Focused list for bm-v26 (must be last so mongo/redis are not appended).
+  if [[ "$slice" == "hybrid-compare" ]]; then
+    if [[ -n "${DATABASE_URL:-}" ]]; then
+      storages="hybrid,postgres,indradb"
+    else
+      storages="indradb"
+    fi
+  fi
   echo "== bench matrix $slice storages=$storages =="
-  cargo run -p valence-bench "${FEATURES_ARGS[@]}" -- matrix "$slice" --storage "$storages"
+  cargo run -p valence-bench "${RELEASE_FLAG[@]}" "${FEATURES_ARGS[@]}" -- matrix "$slice" --storage "$storages"
 }
 
 if [[ -n "$BENCH_SLICE" ]]; then
   if [[ "$BENCH_SLICE" == "all" ]]; then
-    for s in adapter-minimal write-sweep query-depth overhead read-hammer query-real hop-pairs hop-chains; do
+    for s in adapter-minimal write-sweep query-depth overhead read-hammer query-real hop-pairs hop-chains hybrid-compare; do
       run_slice "$s"
     done
   else

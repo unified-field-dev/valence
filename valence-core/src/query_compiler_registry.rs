@@ -68,6 +68,13 @@ impl QueryCompilerRegistry {
                 Arc::new(crate::backend::IndraQueryCompiler) as Arc<dyn QueryCompiler>,
             );
         }
+        #[cfg(feature = "compiler-hybrid")]
+        {
+            self.register(
+                KnownEngines::HYBRID_INDRA_SQL,
+                Arc::new(crate::backend::HybridQueryCompiler) as Arc<dyn QueryCompiler>,
+            );
+        }
     }
 
     /// Register a compiler for an open engine slug.

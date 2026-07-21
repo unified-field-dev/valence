@@ -71,6 +71,7 @@ Reports land under `profiling/valence-bench/reports/` as JSON.
 | **bm-v23** | Complex query (filter+order+page) | all available |
 | **bm-v24** | Cross-backend hop depth-2 | pair matrix |
 | **bm-v25** | Nested hop chain depth-3/4 | representative chains |
+| **bm-v26** | Hybrid vs postgres vs indradb (get / compiled query / M2M hop) | hybrid, postgres, indradb |
 
 ## Matrix slices
 
@@ -84,6 +85,7 @@ Reports land under `profiling/valence-bench/reports/` as JSON.
 | `query-real` | bm-v21, bm-v22, bm-v23 | comma `--storage` |
 | `hop-pairs` | bm-v24 | comma `--storage` |
 | `hop-chains` | bm-v25 | comma `--storage` |
+| `hybrid-compare` | bm-v26 | hybrid, postgres, indradb |
 
 ## AWS campaigns
 

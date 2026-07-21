@@ -59,6 +59,10 @@ pub async fn get_record_via_cache(
     table: &str,
     id: &str,
 ) -> Result<Option<Value>> {
+    // Hybrid owns its IndraDB record cache; skip the process-wide LRU.
+    if backend.engine_id() == crate::KnownEngines::HYBRID_INDRA_SQL {
+        return backend.get_record(table, id).await;
+    }
     if read_cache_enabled() {
         let key = cache_key(table, id);
         if let Some(cached) = global_cache().get(&key) {
@@ -91,7 +95,11 @@ pub async fn get_record_with_ownership_bundle_via_cache(
     valence_model: &str,
     v: &crate::runtime::Valence,
 ) -> Result<RecordOwnershipBundle> {
-    if read_cache_enabled() {
+    // Hybrid tables: still bundle ownership at the runtime layer, but do not store
+    // the row in the process-wide LRU (IndraDB is the row cache).
+    let hybrid = backend.engine_id() == crate::KnownEngines::HYBRID_INDRA_SQL;
+
+    if read_cache_enabled() && !hybrid {
         let key = cache_key(table, id);
         if let Some(cached) = global_cache().get(&key) {
             if cached.ownership_status != OwnershipGateStatus::NotFetched {
@@ -109,9 +117,13 @@ pub async fn get_record_with_ownership_bundle_via_cache(
         v,
     )
     .await?;
-    instrumentation::record_ownership_fetch_mode("unified");
+    instrumentation::record_ownership_fetch_mode(if hybrid {
+        "unified_hybrid"
+    } else {
+        "unified"
+    });
 
-    if read_cache_enabled() {
+    if read_cache_enabled() && !hybrid {
         global_cache().insert(cache_key(table, id), bundle.clone());
     }
     Ok(bundle)
