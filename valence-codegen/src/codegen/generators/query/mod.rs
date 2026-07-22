@@ -48,6 +48,18 @@ pub fn generate_query_builder(
 
         #[allow(dead_code)]
         impl<'a> #query_name<'a> {
+            /// Build a query from an already-configured [`valence::QueryCore`].
+            ///
+            /// Used by cross-crate connection hops; the `valence` field is otherwise private.
+            pub fn from_parts(inner: valence::QueryCore, valence: &'a valence::Valence) -> Self {
+                Self { inner, valence }
+            }
+
+            /// Split into the underlying query core and valence handle.
+            pub fn into_parts(self) -> (valence::QueryCore, &'a valence::Valence) {
+                (self.inner, self.valence)
+            }
+
             #(#where_methods)*
 
             #(#connection_methods)*

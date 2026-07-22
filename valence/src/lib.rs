@@ -421,10 +421,10 @@ pub mod __internal {
 /// Ergonomic imports for schema authoring and generated models.
 pub mod prelude {
     pub use crate::{
-        valence_schema, valence_trait_schema, Cardinality, Database, DatabaseEvaluator,
-        DatabaseFromEngine, FieldChange, FieldOperation, FieldType, IdHolder, Model, Mutation,
-        MutationKind, OnDelete, RecordId, Reference, Role, SideEffect, Validator, WithReference,
-        DEFAULT_IN_MEMORY, DEFAULT_IN_MEMORY_ROUTER_KEY,
+        valence_schema, valence_trait_schema, Cardinality, Currency, CurrencyCode, Database,
+        DatabaseEvaluator, DatabaseFromEngine, FieldChange, FieldOperation, FieldType, IdHolder,
+        JsonAsSerdeError, Model, Mutation, MutationKind, OnDelete, RecordId, Reference, Role,
+        SideEffect, Validator, WithReference, DEFAULT_IN_MEMORY, DEFAULT_IN_MEMORY_ROUTER_KEY,
     };
 }
 

@@ -8,6 +8,7 @@ pub mod enums;
 mod iters;
 mod metadata;
 mod query;
+mod rust_types;
 mod side_effects;
 mod structs;
 mod trait_definition_quote;

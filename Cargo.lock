@@ -5744,6 +5744,7 @@ name = "uf-valence-backend-surreal"
 version = "0.1.1"
 dependencies = [
  "async-trait",
+ "chrono",
  "inventory",
  "serde",
  "serde_json",

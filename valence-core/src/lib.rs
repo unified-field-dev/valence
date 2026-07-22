@@ -48,12 +48,15 @@ pub mod batch;
 pub mod compiled_query;
 pub mod compiled_query_factory;
 pub mod connection;
+pub mod currency;
 pub mod database_retry;
+pub mod datetime_unix;
 pub mod deletion;
 pub mod entity;
 pub mod error;
 pub mod evaluator;
 pub mod iter;
+pub mod json_as;
 pub mod known_engines;
 pub mod model;
 pub mod owner_ref;
@@ -112,6 +115,7 @@ pub use connection::{
     extract_id_from_record, extract_id_from_record_display, extract_id_from_select_value,
     id_from_model, Cardinality, IdHolder, OnDelete,
 };
+pub use currency::{Currency, CurrencyCode, CurrencyError, ParseCurrencyCodeError};
 pub use database_retry::retry_on_database_tx_conflict;
 pub use deletion::{
     dispatch, is_deletion_dispatcher_registered, register_deletion_dispatcher,
@@ -166,7 +170,7 @@ pub use schema_api::{
     ForeignKeyRef, Schema, SchemaConnection, SchemaEdge, SchemaField, SchemaMeta, SchemaPolicies,
     SchemaPolicyRule, SchemaPolicyRules, SchemaPrivacy,
 };
-pub use schema_types::{FieldType, Role, Validator};
+pub use schema_types::{FieldType, JsonAsSerdeError, Role, Validator};
 pub use side_effect::{FieldChange, Mutation, MutationKind, SideEffect};
 pub use trait_registry::TraitRegistry;
 pub use trait_schema::{

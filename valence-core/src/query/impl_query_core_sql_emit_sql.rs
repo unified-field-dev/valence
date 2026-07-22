@@ -105,9 +105,18 @@ impl QueryCore {
         let col = super::sql_document::sql_doc_column(field);
         let param_key = Self::next_param_key(param_counter);
         let (op, value) = match pred {
-            DateTimePredicate::Equals(dt) => ("=", serde_json::Value::String(dt.to_rfc3339())),
-            DateTimePredicate::After(dt) => (">", serde_json::Value::String(dt.to_rfc3339())),
-            DateTimePredicate::Before(dt) => ("<", serde_json::Value::String(dt.to_rfc3339())),
+            DateTimePredicate::Equals(dt) => (
+                "=",
+                serde_json::Value::Number(dt.timestamp().into()),
+            ),
+            DateTimePredicate::After(dt) => (
+                ">",
+                serde_json::Value::Number(dt.timestamp().into()),
+            ),
+            DateTimePredicate::Before(dt) => (
+                "<",
+                serde_json::Value::Number(dt.timestamp().into()),
+            ),
         };
         let params = vec![(param_key.clone(), value)];
         (format!("{col} {op} ${param_key}"), params)

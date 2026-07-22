@@ -1,6 +1,37 @@
 //! DSL type vocabulary used by `valence_schema!` and `valence_trait_schema!`.
 
+/// How `FieldType::JsonAs` handles serde failures on the model boundary.
+///
+/// Write APIs take the declared Rust type `T`, so serialization is not an expected
+/// failure for ordinary `Serialize` impls. Choose [`Panic`](Self::Panic) when failure
+/// indicates a programmer or data invariant violation; choose [`Error`](Self::Error)
+/// (the default) when the host should receive [`crate::Error::Serialization`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum JsonAsSerdeError {
+    /// Map serde failures to [`crate::Error::Serialization`] (via serde custom errors
+    /// that include table, field, and type path context).
+    #[default]
+    Error,
+    /// Panic with table/field/type context (trusted `T` / trusted stored JSON).
+    Panic,
+}
+
 /// Field data types accepted by the Valence DSL.
+///
+/// # DateTime storage
+///
+/// [`FieldType::DateTime`] exposes `chrono::DateTime<chrono::Utc>` on the Model API.
+/// Persistence uses signed `i64` **UTC unix seconds** since the epoch (not milliseconds).
+///
+/// # JsonAs
+///
+/// [`FieldType::JsonAs`] stores JSON and deserializes into an external serde type.
+/// Chain [`.serde_error`](FieldType::serde_error) to select panic vs error behavior.
+///
+/// # Record targets
+///
+/// [`FieldType::Record`] may be chained with [`.target`](FieldType::target) for an
+/// explicit cross-crate model path used by connection helpers and query hops.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldType {
     String,
@@ -10,12 +41,27 @@ pub enum FieldType {
     DateTime,
     Date,
     Json,
+    /// Typed JSON field; default serde policy is [`JsonAsSerdeError::Error`].
+    JsonAs(&'static str),
+    /// Typed JSON with an explicit serde failure policy.
+    JsonAsConfigured {
+        type_path: &'static str,
+        serde_error: JsonAsSerdeError,
+    },
     Record(&'static str),
+    /// Record FK with an explicit target model path (cross-crate or same-crate).
+    RecordTargeted {
+        table: &'static str,
+        target: &'static str,
+    },
     Enum(&'static [&'static str]),
     ExternalEnum(&'static str),
+    /// Composite monetary value (`valence::Currency` / ISO-4217 `CurrencyCode`).
+    Currency,
 }
 
 impl FieldType {
+    /// Logical / DB type name (without cross-crate target or JsonAs policy metadata).
     pub fn as_str(&self) -> String {
         match self {
             FieldType::String => "string".to_string(),
@@ -25,8 +71,83 @@ impl FieldType {
             FieldType::DateTime => "datetime".to_string(),
             FieldType::Date => "date".to_string(),
             FieldType::Json => "json".to_string(),
-            FieldType::Record(table) => format!("record<{table}>"),
+            FieldType::JsonAs(_) | FieldType::JsonAsConfigured { .. } => "json".to_string(),
+            FieldType::Record(table) | FieldType::RecordTargeted { table, .. } => {
+                format!("record<{table}>")
+            }
             FieldType::Enum(_) | FieldType::ExternalEnum(_) => "string".to_string(),
+            FieldType::Currency => "currency".to_string(),
+        }
+    }
+
+    /// Set serde failure policy for a [`JsonAs`](Self::JsonAs) / configured JsonAs field.
+    ///
+    /// Other variants are returned unchanged (DSL extract rejects invalid chains).
+    #[must_use]
+    pub fn serde_error(self, mode: JsonAsSerdeError) -> Self {
+        match self {
+            FieldType::JsonAs(type_path) => FieldType::JsonAsConfigured {
+                type_path,
+                serde_error: mode,
+            },
+            FieldType::JsonAsConfigured { type_path, .. } => FieldType::JsonAsConfigured {
+                type_path,
+                serde_error: mode,
+            },
+            other => other,
+        }
+    }
+
+    /// Attach an explicit model path for connection helpers / query hops.
+    ///
+    /// Only valid on [`Record`](Self::Record) / [`RecordTargeted`](Self::RecordTargeted).
+    /// Other variants are returned unchanged (DSL extract rejects invalid chains).
+    #[must_use]
+    pub fn target(self, path: &'static str) -> Self {
+        match self {
+            FieldType::Record(table) => FieldType::RecordTargeted {
+                table,
+                target: path,
+            },
+            FieldType::RecordTargeted { table, .. } => FieldType::RecordTargeted {
+                table,
+                target: path,
+            },
+            other => other,
+        }
+    }
+
+    /// JsonAs type path when this is a JsonAs variant.
+    pub fn json_as_type_path(&self) -> Option<&'static str> {
+        match self {
+            FieldType::JsonAs(path) => Some(path),
+            FieldType::JsonAsConfigured { type_path, .. } => Some(type_path),
+            _ => None,
+        }
+    }
+
+    /// Serde policy for JsonAs (default [`JsonAsSerdeError::Error`]).
+    pub fn json_as_serde_error(&self) -> Option<JsonAsSerdeError> {
+        match self {
+            FieldType::JsonAs(_) => Some(JsonAsSerdeError::Error),
+            FieldType::JsonAsConfigured { serde_error, .. } => Some(*serde_error),
+            _ => None,
+        }
+    }
+
+    /// Record table name when this is a Record variant.
+    pub fn record_table(&self) -> Option<&'static str> {
+        match self {
+            FieldType::Record(table) | FieldType::RecordTargeted { table, .. } => Some(table),
+            _ => None,
+        }
+    }
+
+    /// Explicit model path from [`.target`](Self::target), if any.
+    pub fn record_target(&self) -> Option<&'static str> {
+        match self {
+            FieldType::RecordTargeted { target, .. } => Some(target),
+            _ => None,
         }
     }
 }
@@ -102,10 +223,30 @@ impl Role {
 
 #[cfg(test)]
 mod tests {
-    use super::FieldType;
+    use super::{FieldType, JsonAsSerdeError};
 
     #[test]
     fn field_type_record_as_str() {
         assert_eq!(FieldType::Record("user").as_str(), "record<user>");
+    }
+
+    #[test]
+    fn field_type_record_target() {
+        let ft = FieldType::Record("user").target("other_crate::generated::User");
+        assert_eq!(ft.as_str(), "record<user>");
+        assert_eq!(ft.record_target(), Some("other_crate::generated::User"));
+    }
+
+    #[test]
+    fn field_type_json_as_serde_error() {
+        let ft = FieldType::JsonAs("crate::Payload").serde_error(JsonAsSerdeError::Panic);
+        assert_eq!(ft.json_as_type_path(), Some("crate::Payload"));
+        assert_eq!(ft.json_as_serde_error(), Some(JsonAsSerdeError::Panic));
+        assert_eq!(FieldType::JsonAs("crate::Payload").as_str(), "json");
+    }
+
+    #[test]
+    fn field_type_currency_as_str() {
+        assert_eq!(FieldType::Currency.as_str(), "currency");
     }
 }

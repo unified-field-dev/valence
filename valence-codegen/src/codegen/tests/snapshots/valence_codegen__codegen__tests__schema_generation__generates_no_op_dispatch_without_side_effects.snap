@@ -1,5 +1,6 @@
 ---
 source: valence-codegen/src/codegen/tests/schema_generation.rs
+assertion_line: 220
 expression: generated
 ---
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -726,6 +727,16 @@ pub struct PlainModelQuery<'a> {
 }
 #[allow(dead_code)]
 impl<'a> PlainModelQuery<'a> {
+    /// Build a query from an already-configured [`valence::QueryCore`].
+    ///
+    /// Used by cross-crate connection hops; the `valence` field is otherwise private.
+    pub fn from_parts(inner: valence::QueryCore, valence: &'a valence::Valence) -> Self {
+        Self { inner, valence }
+    }
+    /// Split into the underlying query core and valence handle.
+    pub fn into_parts(self) -> (valence::QueryCore, &'a valence::Valence) {
+        (self.inner, self.valence)
+    }
     pub fn where_id(mut self, predicate: valence::StringPredicate) -> Self {
         self.inner = self.inner.where_string("id".to_string(), predicate);
         self
@@ -837,12 +848,12 @@ impl PlainModelSchema {
                         "string".to_string(), primary : true, nullable : false, indexed :
                         false, unique : false, default : None, fk : None, validations :
                         Vec::new(), policies : None, encrypted : false, enum_variants :
-                        Vec::new(), enum_type : None, }, valence::SchemaField { name :
-                        "name".to_string(), field_type : "string".to_string(), primary :
-                        false, nullable : false, indexed : false, unique : false, default
-                        : None, fk : None, validations : Vec::new(), policies : None,
-                        encrypted : false, enum_variants : Vec::new(), enum_type : None,
-                        }
+                        Vec::new(), enum_type : None, model_path : None, },
+                        valence::SchemaField { name : "name".to_string(), field_type :
+                        "string".to_string(), primary : false, nullable : false, indexed
+                        : false, unique : false, default : None, fk : None, validations :
+                        Vec::new(), policies : None, encrypted : false, enum_variants :
+                        Vec::new(), enum_type : None, model_path : None, }
                     ],
                     edges: vec![],
                     connections: vec![],

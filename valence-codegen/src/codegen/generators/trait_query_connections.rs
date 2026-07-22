@@ -53,7 +53,7 @@ fn push_has_one_hop(
                     fk_field: #from_field_lit.to_string(),
                 },
             });
-            #target_query_all { inner: target, valence }
+            #target_query_all::from_parts(target, valence)
         }
     });
 }
@@ -88,7 +88,7 @@ fn push_has_many_hop(
                 parent_table,
                 source,
             );
-            #target_query_all { inner: target, valence }
+            #target_query_all::from_parts(target, valence)
         }
     });
 }

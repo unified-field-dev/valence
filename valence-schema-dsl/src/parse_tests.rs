@@ -49,6 +49,26 @@ fn test_parse_connections_block() {
 }
 
 #[test]
+fn test_parse_connection_target_alias() {
+    let input = r#"
+            Post {
+                table: "post",
+                version: "0.1.0",
+                fields: [ id: { r#type: FieldType::String, primary_key: true, required: true } ],
+                connections: [
+                    author: { table: "user", on_delete: Cascade, target: "my_crate::User" }
+                ]
+            }
+        "#;
+    let schema = syn::parse_str::<SchemaSpec>(input).expect("parse");
+    let parsed = schema.to_schema().expect("to_schema");
+    assert_eq!(
+        parsed.connections[0].model.as_deref(),
+        Some("my_crate::User")
+    );
+}
+
+#[test]
 fn test_parse_rejects_unknown_key() {
     let input = r#"
             Foo {

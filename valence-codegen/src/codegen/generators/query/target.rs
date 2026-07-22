@@ -39,7 +39,16 @@ pub(super) fn resolve_target_query_type_with_lifetime(
     })
 }
 
-/// Whether the connection target is in the same crate (typed hops only for `crate::` paths).
+/// Whether typed query hops should be emitted for this connection.
+///
+/// Emits hops when `model_path` is set (including cross-crate paths) or when
+/// omitted (defaults to `crate::generated::{Pascal}`).
+pub(super) fn emits_typed_connection_hop(_conn: &valence_core::SchemaConnection) -> bool {
+    true
+}
+
+/// Whether the connection target is in the same crate (`crate::` path or default).
+#[allow(dead_code)] // retained for callers that still branch on same-crate
 pub(super) fn is_same_crate_connection(conn: &valence_core::SchemaConnection) -> bool {
     match &conn.model_path {
         Some(path) => path.starts_with("crate::"),

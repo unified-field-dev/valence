@@ -34,7 +34,7 @@ mod codegen;
 /// |-------|----------|-------------|
 /// | `table` | yes | Physical / registry table name |
 /// | `version` | yes | Schema version string |
-/// | `fields` | yes | Named field list (`r#type`, `primary_key`, `required`, …) |
+/// | `fields` | yes | Named field list (`r#type`, `primary_key`, `required`, …). See field-type notes below. |
 /// | `description` | no | Human-readable summary |
 /// | `database` | no | Path to a `const`/`static` `DatabaseEvaluator`; defaults to `DEFAULT_IN_MEMORY` |
 /// | `policies` | no | Read/write/update/delete allow lists |
@@ -46,6 +46,17 @@ mod codegen;
 ///
 /// Legacy `privacy: { ... }` blocks are accepted by the parser for compatibility but do not
 /// change emitted runtime metadata (read/write privacy strings are fixed in codegen).
+///
+/// ## Field types (`r#type`)
+///
+/// - `FieldType::Json` — `serde_json::Value`
+/// - `FieldType::JsonAs("path::Type")` — typed JSON; constructors/setters take `T`; optional
+///   `.serde_error(JsonAsSerdeError::Panic|Error)` (default `Error`)
+/// - `FieldType::Record("table")` — `RecordId`; optional `.target("path::Model")` for hops
+/// - `FieldType::Currency` — `valence::Currency` (`CurrencyCode` + `amount_minor`)
+/// - `FieldType::DateTime` — Model API `chrono::DateTime<Utc>`; storage is **UTC unix seconds**
+///
+/// Connections accept `model:` or `target:` (aliases) for an explicit model path.
 ///
 /// Backend selection uses a stable evaluator rather than a backend instance:
 ///
@@ -115,7 +126,7 @@ pub fn valence_schema(input: TokenStream) -> TokenStream {
 ///
 /// | Attribute | Required | Description |
 /// |-----------|----------|-------------|
-/// | `r#type` (or `type`) | yes | Field type expression such as `FieldType::String` or `FieldType::Record("user")` |
+/// | `r#type` (or `type`) | yes | `FieldType` expression. Supported variants include `String`, `Integer`, `Boolean`, `DateTime` (Model API `DateTime<Utc>`; storage is **UTC unix seconds**), `Json` (`serde_json::Value`), `JsonAs("path::Type")` (typed JSON; optional `.serde_error(JsonAsSerdeError::Panic\|Error)`, default `Error`), `Record("table")` (optional `.target("path::Model")` for connection hops), `Currency` (`valence::Currency` / ISO-4217 `CurrencyCode`), `Enum` / `ExternalEnum`. |
 /// | `required` | no | Whether the field must be present (default `false`) |
 /// | `primary_key` | no | Whether the field is a primary key (default `false`) |
 /// | `unique` | no | Whether values must be unique (default `false`) |
@@ -134,6 +145,7 @@ pub fn valence_schema(input: TokenStream) -> TokenStream {
 /// A `connections` entry has a name and braced expression body. Trait registration preserves
 /// the connection name for attribution; declare full connection metadata (`table`,
 /// `cardinality`, `required`, `on_delete`, and related attributes) on the concrete schema.
+/// Use `model:` or `target:` (aliases) for an explicit cross-crate model path.
 ///
 /// # Examples
 ///

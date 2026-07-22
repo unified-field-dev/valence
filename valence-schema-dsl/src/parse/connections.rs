@@ -80,7 +80,7 @@ impl Parse for ConnectionAttr {
             "cardinality" => Ok(ConnectionAttr::Cardinality(input.parse()?)),
             "required" => Ok(ConnectionAttr::Required(input.parse()?)),
             "on_delete" => Ok(ConnectionAttr::OnDelete(input.parse()?)),
-            "model" => Ok(ConnectionAttr::Model(input.parse()?)),
+            "model" | "target" => Ok(ConnectionAttr::Model(input.parse()?)),
             "reverse_field" => Ok(ConnectionAttr::ReverseField(input.parse()?)),
             "edge_table" => Ok(ConnectionAttr::EdgeTable(input.parse()?)),
             "target_trait" => Ok(ConnectionAttr::TargetTrait(input.parse()?)),

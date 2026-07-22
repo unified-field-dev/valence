@@ -30,6 +30,8 @@ pub(super) fn connections_tokens(
             let label = edge_label(&field.name);
             let label_lit = LitStr::new(&label, proc_macro2::Span::call_site());
 
+            let model_path_code = optional_string_lit(field.model_path.as_ref());
+
             Some(quote! {
                 valence::SchemaConnection {
                     name: #field_name_lit.to_string(),
@@ -40,7 +42,7 @@ pub(super) fn connections_tokens(
                     required: true,
                     on_delete: "Cascade".to_string(),
                     label: #label_lit.to_string(),
-                    model_path: None,
+                    model_path: #model_path_code,
                     reverse_field: None,
                     edge_table: None,
                     target_trait: None,

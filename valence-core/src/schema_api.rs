@@ -80,6 +80,9 @@ pub struct SchemaField {
     pub enum_variants: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enum_type: Option<String>,
+    /// Explicit model path from `Record(…).target(…)` (connection / query hops).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_path: Option<String>,
 }
 
 /// Edge/relationship definition retained for older schema shapes.

@@ -19,7 +19,14 @@ pub fn map_field_type_to_string(field_type: &str) -> String {
             "datetime" => "timestamptz".to_string(),
             "date" => "date".to_string(),
             "json" => "json".to_string(),
-            _ => field_type.to_string(),
+            "currency" => "json".to_string(),
+            _ => {
+                if field_type.starts_with("json_as:") {
+                    "json".to_string()
+                } else {
+                    field_type.to_string()
+                }
+            }
         }
     }
 }
