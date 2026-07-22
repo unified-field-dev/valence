@@ -12,6 +12,8 @@ use super::privacy::{parse_policies_config, ParsedPolicies, PoliciesConfig};
 pub struct ParsedField {
     pub name: String,
     pub field_type: String,
+    /// Explicit model path from `Record(…).target(…)` for connection/query codegen.
+    pub model_path: Option<String>,
     pub required: bool,
     pub primary_key: bool,
     pub unique: bool,
@@ -145,6 +147,7 @@ pub(super) fn parse_fields(config: &FieldsConfig) -> Result<Vec<ParsedField>> {
 
     for field in &config.fields {
         let mut field_type = None;
+        let mut model_path = None;
         let mut required = true;
         let mut primary_key = false;
         let mut unique = false;
@@ -156,7 +159,9 @@ pub(super) fn parse_fields(config: &FieldsConfig) -> Result<Vec<ParsedField>> {
         for attr in &field.attrs {
             match attr {
                 FieldAttr::Type(t) => {
-                    field_type = Some(crate::extract::extract_field_type_string(t)?)
+                    let extracted = crate::extract::extract_field_type(t)?;
+                    field_type = Some(extracted.field_type);
+                    model_path = extracted.model_path;
                 }
                 FieldAttr::Required(b) => required = b.value,
                 FieldAttr::PrimaryKey(b) => primary_key = b.value,
@@ -184,6 +189,7 @@ pub(super) fn parse_fields(config: &FieldsConfig) -> Result<Vec<ParsedField>> {
         fields.push(ParsedField {
             name: field.name.to_string(),
             field_type,
+            model_path,
             required,
             primary_key,
             unique,

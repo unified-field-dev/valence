@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::collections::HashMap;
 
 use crate::codegen::generate_from_schema_file;
@@ -300,5 +301,111 @@ valence_schema! {
     assert!(
         generated.contains("join_with"),
         "Expected join_with call in generated join method"
+    );
+}
+
+#[test]
+fn generates_json_as_and_currency_and_record_target() {
+    let schema = r#"
+use valence::prelude::*;
+
+valence_schema! {
+    TypedFields {
+        table: "typed_fields",
+        version: "0.1.0",
+        fields: [
+            id: { r#type: FieldType::String, primary_key: true, required: true },
+            payload: { r#type: FieldType::JsonAs("crate::Payload"), required: true },
+            panic_payload: {
+                r#type: FieldType::JsonAs("crate::Payload").serde_error(JsonAsSerdeError::Panic),
+                required: true
+            },
+            price: { r#type: FieldType::Currency, required: true },
+            author: {
+                r#type: FieldType::Record("user").target("other_crate::generated::User"),
+                required: true
+            },
+            blob: { r#type: FieldType::Json, required: true },
+            at: { r#type: FieldType::DateTime, required: true },
+        ]
+    }
+}
+"#;
+
+    let path = write_temp_schema_file(schema, "typed_fields_schema.rs");
+    let generated = generate_from_schema_file(&path, &HashMap::<String, ParsedTraitDef>::new())
+        .expect("typed fields codegen failed");
+
+    assert!(
+        generated.contains("payload: crate :: Payload")
+            || generated.contains("payload: crate::Payload"),
+        "Expected JsonAs Rust type on payload"
+    );
+    assert!(
+        generated.contains("serde_json::Value"),
+        "Expected plain Json to remain serde_json::Value"
+    );
+    assert!(
+        generated.contains("valence::Currency"),
+        "Expected Currency field type"
+    );
+    assert!(
+        generated.contains("where_price_code") && generated.contains("where_price_minor"),
+        "Expected currency subfield query methods"
+    );
+    assert!(
+        generated.contains("other_crate::generated::User")
+            || generated.contains("other_crate :: generated :: User"),
+        "Expected Record.target model path in connection helpers"
+    );
+    assert!(
+        generated.contains("valence::datetime_unix"),
+        "Expected datetime unix serde module"
+    );
+    assert!(
+        generated.contains("JsonAsSerdeError::Panic")
+            || generated.contains("valence::JsonAsSerdeError::Panic"),
+        "Expected Panic serde policy helper"
+    );
+}
+
+#[test]
+fn connection_target_alias_sets_model_path() {
+    let schema = r#"
+use valence::prelude::*;
+
+valence_schema! {
+    Note {
+        table: "note",
+        version: "0.1.0",
+        fields: [
+            id: { r#type: FieldType::String, primary_key: true, required: true },
+            author: { r#type: FieldType::Record("user"), required: true },
+        ],
+        connections: [
+            author: {
+                table: "user",
+                cardinality: HasOne,
+                required: true,
+                on_delete: Cascade,
+                target: "other_crate::generated::User",
+            },
+        ],
+    }
+}
+"#;
+
+    let path = write_temp_schema_file(schema, "note_target_alias.rs");
+    let generated = generate_from_schema_file(&path, &HashMap::<String, ParsedTraitDef>::new())
+        .expect("target alias codegen failed");
+
+    assert!(
+        generated.contains("other_crate::generated::User")
+            || generated.contains("other_crate :: generated :: User"),
+        "Expected target: alias to populate model_path"
+    );
+    assert!(
+        generated.contains("query_author"),
+        "Expected typed hop for cross-crate target"
     );
 }

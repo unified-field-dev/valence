@@ -1,10 +1,4 @@
 impl QueryCore {
-    fn next_param_key(param_counter: &mut usize) -> String {
-        let key = format!("param_{}", *param_counter);
-        *param_counter += 1;
-        key
-    }
-
     fn int_clause_sql(
         field: &str,
         pred: &IntPredicate,
@@ -95,9 +89,18 @@ impl QueryCore {
     ) -> (String, Vec<(String, serde_json::Value)>) {
         let param_key = Self::next_param_key(param_counter);
         let (op, value) = match pred {
-            DateTimePredicate::Equals(dt) => ("=", serde_json::Value::String(dt.to_rfc3339())),
-            DateTimePredicate::After(dt) => (">", serde_json::Value::String(dt.to_rfc3339())),
-            DateTimePredicate::Before(dt) => ("<", serde_json::Value::String(dt.to_rfc3339())),
+            DateTimePredicate::Equals(dt) => (
+                "=",
+                serde_json::Value::Number(dt.timestamp().into()),
+            ),
+            DateTimePredicate::After(dt) => (
+                ">",
+                serde_json::Value::Number(dt.timestamp().into()),
+            ),
+            DateTimePredicate::Before(dt) => (
+                "<",
+                serde_json::Value::Number(dt.timestamp().into()),
+            ),
         };
         let params = vec![(param_key.clone(), value)];
         (format!("{field} {op} ${param_key}"), params)

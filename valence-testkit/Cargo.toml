@@ -14,6 +14,12 @@ sqlite = ["dep:valence-backend-sqlite", "valence-core/compiler-sql"]
 postgres = ["dep:valence-backend-postgres", "valence-core/compiler-sql"]
 mongodb = ["dep:valence-backend-mongodb", "valence-core/compiler-mongodb"]
 indradb = ["dep:valence-backend-indradb", "valence-core/compiler-indradb"]
+hybrid = [
+    "dep:valence-backend-hybrid",
+    "dep:valence-backend-postgres",
+    "postgres",
+    "valence-core/compiler-hybrid",
+]
 redis = ["dep:valence-backend-redis", "valence-core/compiler-redis"]
 cross-backend-hops = ["sqlite", "dep:cross-backend-model-host"]
 surreal-mem = [
@@ -38,6 +44,7 @@ serde_json = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true }
 valence-backend-indradb = { workspace = true, optional = true }
+valence-backend-hybrid = { workspace = true, optional = true }
 valence-backend-mem = { workspace = true }
 valence-backend-mongodb = { workspace = true, optional = true }
 valence-backend-postgres = { workspace = true, optional = true }

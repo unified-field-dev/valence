@@ -1,5 +1,7 @@
 //! Unit tests for [`SchemaSpec`] parsing and [`SchemaSpec::to_schema`] lowering.
 
+#![allow(clippy::expect_used, clippy::unwrap_used, clippy::manual_let_else)]
+
 use crate::parse::*;
 
 #[test]
@@ -44,6 +46,26 @@ fn test_parse_connections_block() {
         Some("my_crate::User")
     );
     assert_eq!(parsed.fields.len(), 1);
+}
+
+#[test]
+fn test_parse_connection_target_alias() {
+    let input = r#"
+            Post {
+                table: "post",
+                version: "0.1.0",
+                fields: [ id: { r#type: FieldType::String, primary_key: true, required: true } ],
+                connections: [
+                    author: { table: "user", on_delete: Cascade, target: "my_crate::User" }
+                ]
+            }
+        "#;
+    let schema = syn::parse_str::<SchemaSpec>(input).expect("parse");
+    let parsed = schema.to_schema().expect("to_schema");
+    assert_eq!(
+        parsed.connections[0].model.as_deref(),
+        Some("my_crate::User")
+    );
 }
 
 #[test]

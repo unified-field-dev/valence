@@ -5,61 +5,20 @@ use quote::{format_ident, quote};
 
 use crate::codegen::schema::SchemaContext;
 use crate::codegen::utils::to_pascal_case;
-use valence_core::SchemaField;
 
 use super::enums::generate_enum_definition;
+use super::rust_types::{json_as_helpers_and_attrs, parse_json_as, rust_type_tokens};
 use super::validation::generate_validation_code;
 
-fn scalar_field_type_tokens(field_type_str: &str) -> TokenStream {
-    match field_type_str {
-        "string" => quote! { String },
-        "integer" => quote! { i64 },
-        "float" => quote! { f64 },
-        "boolean" => quote! { bool },
-        "datetime" => quote! { chrono::DateTime<chrono::Utc> },
-        "json" => quote! { serde_json::Value },
-        _ => quote! { String },
-    }
-}
-
-/// Rust type for a model field; may push a generated enum definition into `enum_defs`.
-fn struct_field_rust_type_tokens(
-    field: &SchemaField,
-    model_name: &str,
-    enum_defs: &mut Vec<TokenStream>,
-) -> TokenStream {
-    let field_type_str = field.field_type.as_str();
-    let field_name_str = field.name.as_str();
-
-    if field_type_str.starts_with("enum:") || field_type_str.starts_with("ext_enum:") {
-        if let Some(ref etype) = field.enum_type {
-            return etype.parse().unwrap_or_else(|_| {
-                let ident = format_ident!("{}", etype);
-                quote! { #ident }
-            });
-        }
-        if field_type_str.starts_with("enum:") && !field.enum_variants.is_empty() {
-            let enum_name = format!("{}{}", model_name, to_pascal_case(field_name_str));
-            enum_defs.push(generate_enum_definition(&enum_name, &field.enum_variants));
-            let ident = format_ident!("{}", enum_name);
-            return quote! { #ident };
-        }
-        return quote! { String };
-    }
-
-    if field_type_str.starts_with("record<") && field_type_str.ends_with('>') {
-        return quote! { valence::RecordId };
-    }
-
-    scalar_field_type_tokens(field_type_str)
-}
-
+#[allow(clippy::unnecessary_wraps)] // Result kept for uniform generator API
 pub fn generate_struct(schema: &SchemaContext) -> Result<TokenStream, Box<dyn std::error::Error>> {
     let struct_name = format_ident!("{}", to_pascal_case(&schema.table_name));
     let model_name = to_pascal_case(&schema.table_name);
     let schema_struct_name = format_ident!("{}Schema", struct_name);
+    let table_name = schema.table_name.as_str();
 
     let mut enum_defs = Vec::new();
+    let mut json_as_helpers = Vec::new();
     let mut field_defs = Vec::new();
     let mut getter_methods = Vec::new();
     let mut constructor_params = Vec::new();
@@ -73,12 +32,35 @@ pub fn generate_struct(schema: &SchemaContext) -> Result<TokenStream, Box<dyn st
         let is_primary_key = field.primary;
         let is_required = !field.nullable;
 
-        let field_type: TokenStream =
-            struct_field_rust_type_tokens(field, &model_name, &mut enum_defs);
+        // Generate inline enums for enum: variants.
+        if field_type_str.starts_with("enum:")
+            && field.enum_type.is_none()
+            && !field.enum_variants.is_empty()
+        {
+            let enum_name = format!("{}{}", model_name, to_pascal_case(field_name_str));
+            enum_defs.push(generate_enum_definition(&enum_name, &field.enum_variants));
+        }
 
-        let is_json_type = field_type_str == "json";
+        let field_type = rust_type_tokens(field, &model_name);
 
-        // For primary key (id), it's optional
+        let mut serde_attrs = quote! {};
+        if field_type_str == "datetime" {
+            serde_attrs = if is_required {
+                quote! { #[serde(with = "valence::datetime_unix")] }
+            } else {
+                quote! { #[serde(default, with = "valence::datetime_unix::option")] }
+            };
+        } else if let Some((helpers, attrs)) =
+            json_as_helpers_and_attrs(field, table_name, &field_type)
+        {
+            json_as_helpers.push(helpers);
+            serde_attrs = attrs;
+        } else if field_type_str == "json" && is_required {
+            serde_attrs = quote! { #[serde(default)] };
+        } else if !is_required {
+            serde_attrs = quote! { #[serde(default)] };
+        }
+
         if is_primary_key {
             field_defs.push(quote! {
                 #[serde(default)]
@@ -90,59 +72,61 @@ pub fn generate_struct(schema: &SchemaContext) -> Result<TokenStream, Box<dyn st
                     self.#field_name.as_ref()
                 }
             });
-        } else {
-            // Regular fields
-            if is_required {
-                if is_json_type {
-                    field_defs.push(quote! {
-                        #[serde(default)]
-                        #field_name: #field_type
-                    });
-                } else {
-                    field_defs.push(quote! {
-                        #field_name: #field_type
-                    });
+            continue;
+        }
+
+        if is_required {
+            field_defs.push(quote! {
+                #serde_attrs
+                #field_name: #field_type
+            });
+
+            getter_methods.push(quote! {
+                pub fn #field_name(&self) -> &#field_type {
+                    &self.#field_name
                 }
+            });
 
-                getter_methods.push(quote! {
-                    pub fn #field_name(&self) -> &#field_type {
-                        &self.#field_name
-                    }
-                });
+            constructor_params.push(quote! { #field_name: #field_type });
 
-                // Add to constructor parameters
-                constructor_params.push(quote! { #field_name: #field_type });
-
-                // Generate validation code if validations exist
-                let validation_code = generate_validation_code(field_name_str, &field.validations);
-                if !validation_code.is_empty() {
-                    constructor_validations.push(validation_code);
-                }
-
-                constructor_inits.push(quote! { #field_name });
-            } else {
-                field_defs.push(quote! {
-                    #[serde(default)]
-                    #field_name: Option<#field_type>
-                });
-
-                getter_methods.push(quote! {
-                    pub fn #field_name(&self) -> Option<&#field_type> {
-                        self.#field_name.as_ref()
-                    }
-                });
-
-                constructor_params.push(quote! { #field_name: Option<#field_type> });
-                constructor_inits.push(quote! { #field_name });
+            let validation_code = generate_validation_code(field_name_str, &field.validations);
+            if !validation_code.is_empty() {
+                constructor_validations.push(validation_code);
             }
+
+            constructor_inits.push(quote! { #field_name });
+        } else {
+            // Optional datetime / JsonAs: Option wrapping.
+            let storage_ty = if field_type_str == "datetime" {
+                quote! { Option<chrono::DateTime<chrono::Utc>> }
+            } else if parse_json_as(field_type_str).is_some() {
+                quote! { Option<#field_type> }
+            } else {
+                quote! { Option<#field_type> }
+            };
+
+            field_defs.push(quote! {
+                #serde_attrs
+                #field_name: #storage_ty
+            });
+
+            getter_methods.push(quote! {
+                pub fn #field_name(&self) -> Option<&#field_type> {
+                    self.#field_name.as_ref()
+                }
+            });
+
+            constructor_params.push(quote! { #field_name: Option<#field_type> });
+            constructor_inits.push(quote! { #field_name });
         }
     }
 
-    // Generate Reference type alias
     let reference_name = format_ident!("{}Reference", struct_name);
 
     Ok(quote! {
         #(#enum_defs)*
+
+        #(#json_as_helpers)*
 
         #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
         pub struct #struct_name {
@@ -157,7 +141,6 @@ pub fn generate_struct(schema: &SchemaContext) -> Result<TokenStream, Box<dyn st
         impl #struct_name {
             /// Create a new #struct_name
             pub fn new(#(#constructor_params),*) -> valence::Result<Self> {
-                // Validations
                 #(#constructor_validations)*
 
                 Ok(Self {

@@ -6,8 +6,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Local/WSL defaults to 1; AWS campaign hosts typically leave this unset or raise it.
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
 export VALENCE_BENCH_HARDWARE="${VALENCE_BENCH_HARDWARE:-aws-unset}"
+# Set VALENCE_BENCH_RELEASE=1 for capacity / published comparative numbers.
+RELEASE_FLAG=()
+if [[ "${VALENCE_BENCH_RELEASE:-}" == "1" || "${VALENCE_BENCH_RELEASE:-}" == "true" ]]; then
+  RELEASE_FLAG=(--release)
+fi
 
 DRY_RUN=0
 DO_E2E=0
@@ -20,7 +26,7 @@ Usage: aws-e2e-bench.sh [--dry-run] [--e2e] [--bench SLICE|all]
   --dry-run   Print expected tests/experiments and env presence; exit 0
   --e2e       Run cargo test -p valence-e2e -- --test-threads=1
   --bench S   Run matrix slice (read-hammer|query-real|hop-pairs|hop-chains|
-              adapter-minimal|write-sweep|query-depth|overhead|all)
+              hybrid-compare|adapter-minimal|write-sweep|query-depth|overhead|all)
 EOF
 }
 
@@ -52,7 +58,7 @@ echo "  cross_backend_hops (depth-2 Cartesian + chain depths)"
 
 echo "== expected bench slices =="
 echo "  adapter-minimal write-sweep query-depth overhead"
-echo "  read-hammer query-real hop-pairs hop-chains"
+echo "  read-hammer query-real hop-pairs hop-chains hybrid-compare"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "dry-run complete"
@@ -60,19 +66,28 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
 fi
 
 # Wire / rocksdb adapters need explicit crate features (env alone is not enough).
-AWS_EXTRA_FEATURES=()
+E2E_EXTRA_FEATURES=()
+BENCH_EXTRA_FEATURES=()
 if [[ -n "${DATABASE_URL:-}" ]]; then
-  AWS_EXTRA_FEATURES+=("postgres")
+  E2E_EXTRA_FEATURES+=("postgres" "hybrid")
+  BENCH_EXTRA_FEATURES+=("postgres" "hybrid")
 fi
 if [[ "${VALENCE_BENCH_ROCKSDB:-}" == "1" ]]; then
-  AWS_EXTRA_FEATURES+=("surreal-rocksdb")
+  E2E_EXTRA_FEATURES+=("surreal-rocksdb")
+  BENCH_EXTRA_FEATURES+=("surreal-rocksdb")
 fi
-FEATURES_ARGS=()
-if [[ ${#AWS_EXTRA_FEATURES[@]} -gt 0 ]]; then
-  IFS=,
-  FEATURES_ARGS=(--features "${AWS_EXTRA_FEATURES[*]}")
-  unset IFS
-fi
+features_args_from() {
+  local -n _feats=$1
+  if [[ ${#_feats[@]} -eq 0 ]]; then
+    return 0
+  fi
+  local IFS=,
+  echo --features "${_feats[*]}"
+}
+# shellcheck disable=SC2207
+E2E_FEATURES_ARGS=($(features_args_from E2E_EXTRA_FEATURES))
+# shellcheck disable=SC2207
+BENCH_FEATURES_ARGS=($(features_args_from BENCH_EXTRA_FEATURES))
 
 wipe_wire_stores() {
   echo "== wipe wire stores =="
@@ -114,7 +129,7 @@ if [[ "$DO_E2E" -eq 1 ]]; then
   for harness in admin_runtime_catalog model_runtime_catalog matrix_catalog cross_backend_hops; do
     wipe_wire_stores
     echo "== e2e harness ${harness} =="
-    if ! cargo test -p valence-e2e "${FEATURES_ARGS[@]}" --test "$harness" -- --test-threads=1; then
+    if ! cargo test -p valence-e2e "${E2E_FEATURES_ARGS[@]}" --test "$harness" -- --test-threads=1; then
       echo "E2E_HARNESS_FAIL:${harness}"
       e2e_rc=1
     else
@@ -134,7 +149,7 @@ run_slice() {
   export CARGO_TARGET_DIR=target-valence-bench
   local storages="mem,sqlite,surreal-mem,indradb"
   if [[ -n "${DATABASE_URL:-}" ]]; then
-    storages+=",postgres"
+    storages+=",postgres,hybrid"
   fi
   if [[ -n "${VALENCE_MONGODB_URI:-}" ]]; then
     storages+=",mongodb"
@@ -145,13 +160,21 @@ run_slice() {
   if [[ "${VALENCE_BENCH_ROCKSDB:-}" == "1" ]]; then
     storages+=",surreal-rocksdb"
   fi
+  # Focused list for bm-v26 (must be last so mongo/redis are not appended).
+  if [[ "$slice" == "hybrid-compare" ]]; then
+    if [[ -n "${DATABASE_URL:-}" ]]; then
+      storages="hybrid,postgres,indradb"
+    else
+      storages="indradb"
+    fi
+  fi
   echo "== bench matrix $slice storages=$storages =="
-  cargo run -p valence-bench "${FEATURES_ARGS[@]}" -- matrix "$slice" --storage "$storages"
+  cargo run -p valence-bench "${RELEASE_FLAG[@]}" "${BENCH_FEATURES_ARGS[@]}" -- matrix "$slice" --storage "$storages"
 }
 
 if [[ -n "$BENCH_SLICE" ]]; then
   if [[ "$BENCH_SLICE" == "all" ]]; then
-    for s in adapter-minimal write-sweep query-depth overhead read-hammer query-real hop-pairs hop-chains; do
+    for s in adapter-minimal write-sweep query-depth overhead read-hammer query-real hop-pairs hop-chains hybrid-compare; do
       run_slice "$s"
     done
   else

@@ -2,13 +2,14 @@
 
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use valence_core::SchemaField;
 
+use crate::codegen::generators::rust_types::rust_type_tokens;
 use crate::codegen::schema::SchemaContext;
 use crate::codegen::utils::to_pascal_case;
 
 /// Generate `*FieldChanges` struct, its `compute` method, and side-effect dispatch
 /// helper for a model.
+#[allow(clippy::unnecessary_wraps)] // Result kept for uniform generator API
 pub fn generate_side_effects(
     schema: &SchemaContext,
 ) -> Result<TokenStream, Box<dyn std::error::Error>> {
@@ -27,7 +28,7 @@ pub fn generate_side_effects(
         let field_name = format_ident!("{}", field.name);
         let is_required = !field.nullable;
 
-        let field_type = field_type_tokens_for(field, &model_name);
+        let field_type = rust_type_tokens(field, &model_name);
 
         if is_required {
             // Required field: FieldChange wraps the raw type
@@ -147,38 +148,4 @@ fn generate_dispatch_code(schema: &SchemaContext) -> TokenStream {
             }
         }
     }
-}
-
-fn field_type_tokens(field_type_str: &str) -> TokenStream {
-    if field_type_str.starts_with("record<") && field_type_str.ends_with('>') {
-        quote! { valence::RecordId }
-    } else {
-        match field_type_str {
-            "string" => quote! { String },
-            "integer" => quote! { i64 },
-            "float" => quote! { f64 },
-            "boolean" => quote! { bool },
-            "datetime" => quote! { chrono::DateTime<chrono::Utc> },
-            "json" => quote! { serde_json::Value },
-            _ => quote! { String },
-        }
-    }
-}
-
-fn field_type_tokens_for(field: &SchemaField, model_name: &str) -> TokenStream {
-    let ft = field.field_type.as_str();
-    if ft.starts_with("enum:") || ft.starts_with("ext_enum:") {
-        if let Some(ref etype) = field.enum_type {
-            return etype.parse().unwrap_or_else(|_| {
-                let ident = format_ident!("{}", etype);
-                quote! { #ident }
-            });
-        }
-        if ft.starts_with("enum:") {
-            let enum_name = format!("{}{}", model_name, to_pascal_case(&field.name));
-            let ident = format_ident!("{}", enum_name);
-            return quote! { #ident };
-        }
-    }
-    field_type_tokens(ft)
 }

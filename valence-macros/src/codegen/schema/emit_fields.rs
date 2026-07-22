@@ -39,6 +39,14 @@ pub(super) fn fields_tokens(fields: &[valence_schema_dsl::ParsedField]) -> Vec<T
                 quote! { None }
             };
 
+            let model_path_code = field.model_path.as_ref().map_or_else(
+                || quote! { None },
+                |p| {
+                    let lit = LitStr::new(p, proc_macro2::Span::call_site());
+                    quote! { Some(#lit.to_string()) }
+                },
+            );
+
             quote! {
                 valence::SchemaField {
                     name: #name_lit.to_string(),
@@ -54,6 +62,7 @@ pub(super) fn fields_tokens(fields: &[valence_schema_dsl::ParsedField]) -> Vec<T
                     encrypted: #encrypted,
                     enum_variants: Vec::new(),
                     enum_type: None,
+                    model_path: #model_path_code,
                 }
             }
         })

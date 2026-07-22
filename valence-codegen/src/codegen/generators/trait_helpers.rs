@@ -4,43 +4,17 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use valence_core::SchemaField;
 
-use crate::codegen::utils::to_pascal_case;
+use crate::codegen::generators::rust_types::{parse_json_as, rust_type_tokens};
 
-pub fn rust_type_for(field_type: &str) -> TokenStream {
-    if field_type.starts_with("record<") && field_type.ends_with('>') {
-        quote! { valence::RecordId }
-    } else {
-        match field_type {
-            "string" => quote! { String },
-            "integer" => quote! { i64 },
-            "float" => quote! { f64 },
-            "boolean" => quote! { bool },
-            "datetime" => quote! { chrono::DateTime<chrono::Utc> },
-            "json" => quote! { serde_json::Value },
-            _ => quote! { String },
-        }
-    }
-}
-
-/// Resolve the Rust type for a field, handling enum fields.
+/// Resolve the Rust type for a field, handling enum / JsonAs fields.
 pub fn rust_type_for_field(field: &SchemaField, context_name: &str) -> TokenStream {
-    if field.field_type.starts_with("enum:") || field.field_type.starts_with("ext_enum:") {
-        if let Some(ref etype) = field.enum_type {
-            let parsed: TokenStream = etype.parse().unwrap_or_else(|_| {
-                let ident = format_ident!("{}", etype);
-                quote! { #ident }
-            });
-            return parsed;
-        }
-        let enum_name = format!("{}{}", context_name, to_pascal_case(&field.name));
-        let ident = format_ident!("{}", enum_name);
-        quote! { #ident }
-    } else {
-        rust_type_for(&field.field_type)
-    }
+    rust_type_tokens(field, context_name)
 }
 
 pub fn predicate_type_for(field_type: &str) -> TokenStream {
+    if parse_json_as(field_type).is_some() {
+        return quote! { valence::StringPredicate };
+    }
     if field_type.starts_with("record<") && field_type.ends_with('>') {
         quote! { valence::RecordPredicate }
     } else {

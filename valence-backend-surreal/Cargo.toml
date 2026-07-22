@@ -33,6 +33,7 @@ valence-core = { workspace = true }
 valence-telemetry = { workspace = true, optional = true }
 
 [dev-dependencies]
+chrono = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 valence-core = { workspace = true, features = ["instrumentation"] }
 valence-telemetry = { workspace = true }
@@ -57,6 +58,10 @@ required-features = ["embedded-rocksdb"]
 
 [[test]]
 name = "backend_contract"
+required-features = ["embedded-mem"]
+
+[[test]]
+name = "typed_field_roundtrip"
 required-features = ["embedded-mem"]
 
 [[test]]

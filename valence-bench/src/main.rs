@@ -3,6 +3,19 @@
 #![allow(dead_code)]
 #![allow(clippy::useless_format)]
 #![allow(clippy::needless_collect)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::print_stdout,
+    clippy::print_stderr
+)]
+// Benchmark harness: percentile casts and uniform Result-returning runners.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::unnecessary_wraps,
+    clippy::trivially_copy_pass_by_ref
+)]
 
 mod experiments;
 mod matrix;
@@ -196,6 +209,7 @@ async fn run_matrix_slice(args: &MatrixArgs, wire: WireBackendOptions) -> Result
         "query-real" => vec!["bm-v21", "bm-v22", "bm-v23"],
         "hop-pairs" => vec!["bm-v24"],
         "hop-chains" => vec!["bm-v25"],
+        "hybrid-compare" => vec!["bm-v26"],
         other => bail!("unknown matrix slice: {other}"),
     };
 

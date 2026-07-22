@@ -1,5 +1,6 @@
 ---
 source: valence-codegen/src/codegen/tests/schema_generation.rs
+assertion_line: 170
 expression: generated
 ---
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -810,6 +811,16 @@ pub struct ScoreTrackerQuery<'a> {
 }
 #[allow(dead_code)]
 impl<'a> ScoreTrackerQuery<'a> {
+    /// Build a query from an already-configured [`valence::QueryCore`].
+    ///
+    /// Used by cross-crate connection hops; the `valence` field is otherwise private.
+    pub fn from_parts(inner: valence::QueryCore, valence: &'a valence::Valence) -> Self {
+        Self { inner, valence }
+    }
+    /// Split into the underlying query core and valence handle.
+    pub fn into_parts(self) -> (valence::QueryCore, &'a valence::Valence) {
+        (self.inner, self.valence)
+    }
     pub fn where_id(mut self, predicate: valence::StringPredicate) -> Self {
         self.inner = self.inner.where_string("id".to_string(), predicate);
         self
@@ -846,10 +857,7 @@ impl<'a> ScoreTrackerQuery<'a> {
                 fk_field: "user".to_string(),
             },
         });
-        crate::generated::UserQuery {
-            inner: target,
-            valence,
-        }
+        crate::generated::UserQuery::from_parts(target, valence)
     }
     pub fn order_by_id(mut self, direction: valence::SortDirection) -> Self {
         self.inner = self.inner.order_by("id".to_string(), direction);
@@ -955,18 +963,19 @@ impl ScoreTrackerSchema {
                         "string".to_string(), primary : true, nullable : false, indexed :
                         false, unique : false, default : None, fk : None, validations :
                         Vec::new(), policies : None, encrypted : false, enum_variants :
-                        Vec::new(), enum_type : None, }, valence::SchemaField { name :
-                        "user".to_string(), field_type : "record(user)".to_string(),
-                        primary : false, nullable : false, indexed : false, unique :
-                        false, default : None, fk : Some(valence::ForeignKeyRef {
-                        ref_table : "user".to_string(), field : "id".to_string(), }),
-                        validations : Vec::new(), policies : None, encrypted : false,
-                        enum_variants : Vec::new(), enum_type : None, },
-                        valence::SchemaField { name : "value".to_string(), field_type :
-                        "integer".to_string(), primary : false, nullable : false, indexed
-                        : false, unique : false, default : None, fk : None, validations :
-                        Vec::new(), policies : None, encrypted : false, enum_variants :
-                        Vec::new(), enum_type : None, }
+                        Vec::new(), enum_type : None, model_path : None, },
+                        valence::SchemaField { name : "user".to_string(), field_type :
+                        "record(user)".to_string(), primary : false, nullable : false,
+                        indexed : false, unique : false, default : None, fk :
+                        Some(valence::ForeignKeyRef { ref_table : "user".to_string(),
+                        field : "id".to_string(), }), validations : Vec::new(), policies
+                        : None, encrypted : false, enum_variants : Vec::new(), enum_type
+                        : None, model_path : None, }, valence::SchemaField { name :
+                        "value".to_string(), field_type : "integer".to_string(), primary
+                        : false, nullable : false, indexed : false, unique : false,
+                        default : None, fk : None, validations : Vec::new(), policies :
+                        None, encrypted : false, enum_variants : Vec::new(), enum_type :
+                        None, model_path : None, }
                     ],
                     edges: vec![
                         valence::SchemaEdge { from_field : "user".to_string(), to_table :

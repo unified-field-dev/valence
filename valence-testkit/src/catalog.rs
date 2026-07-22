@@ -178,6 +178,13 @@ fn router_multi_logical_spec(storage: StorageAdapter) -> ScenarioSpec {
         ),
         #[cfg(not(feature = "redis"))]
         StorageAdapter::Redis => ScenarioSpec::router_multi_logical_mem(),
+        #[cfg(feature = "hybrid")]
+        StorageAdapter::HybridIndraPg => ScenarioSpec::router_multi_logical_engine(
+            valence_backend_hybrid::ENGINE_ID,
+            &["default", "billing"],
+        ),
+        #[cfg(not(feature = "hybrid"))]
+        StorageAdapter::HybridIndraPg => ScenarioSpec::router_multi_logical_mem(),
     }
 }
 

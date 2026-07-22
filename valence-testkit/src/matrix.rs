@@ -12,6 +12,8 @@ pub enum StorageAdapter {
     Postgres,
     MongoDb,
     IndraDb,
+    /// IndraDB cache over Postgres primary (`hybrid_indra_sql`).
+    HybridIndraPg,
     Redis,
     SurrealMem,
     SurrealRocksdb,
@@ -26,6 +28,7 @@ impl StorageAdapter {
             Self::Postgres => "postgres",
             Self::MongoDb => "mongodb",
             Self::IndraDb => "indradb",
+            Self::HybridIndraPg => "hybrid",
             Self::Redis => "redis",
             Self::SurrealMem => "surreal-mem",
             Self::SurrealRocksdb => "surreal-rocksdb",
@@ -40,6 +43,7 @@ impl StorageAdapter {
             "postgres" | "postgresql" => Some(Self::Postgres),
             "mongodb" | "mongo" => Some(Self::MongoDb),
             "indradb" | "indra" => Some(Self::IndraDb),
+            "hybrid" | "hybrid-indra-pg" | "hybrid_indra_pg" => Some(Self::HybridIndraPg),
             "redis" => Some(Self::Redis),
             "surreal-mem" | "surreal_mem" => Some(Self::SurrealMem),
             "surreal-rocksdb" | "surreal_rocksdb" | "rocksdb" => Some(Self::SurrealRocksdb),
@@ -102,6 +106,9 @@ pub fn all_storage_adapters() -> Vec<StorageAdapter> {
     ];
     if cfg!(feature = "postgres") {
         out.push(StorageAdapter::Postgres);
+    }
+    if cfg!(feature = "hybrid") {
+        out.push(StorageAdapter::HybridIndraPg);
     }
     if cfg!(feature = "surreal-mem") {
         out.push(StorageAdapter::SurrealMem);
@@ -230,15 +237,15 @@ impl fmt::Display for MatrixSpec {
 /// Whether a wire backend builder can resolve for this storage adapter.
 pub fn wire_backend_configured(storage: StorageAdapter, wire: Option<&WireBackendOptions>) -> bool {
     match storage {
-        StorageAdapter::Postgres => {
-            #[cfg(feature = "postgres")]
+        StorageAdapter::Postgres | StorageAdapter::HybridIndraPg => {
+            #[cfg(any(feature = "postgres", feature = "hybrid"))]
             {
                 let builder = wire
                     .and_then(|o| o.postgres.clone())
                     .unwrap_or_else(valence_backend_postgres::PostgresBackendBuilder::new);
                 builder.from_env_defaults().resolve().is_ok()
             }
-            #[cfg(not(feature = "postgres"))]
+            #[cfg(not(any(feature = "postgres", feature = "hybrid")))]
             {
                 let _ = wire;
                 false
@@ -302,11 +309,13 @@ pub fn extended_store_available_with_wire(
         StorageAdapter::Postgres => {
             cfg!(feature = "postgres") && wire_backend_configured(storage, wire)
         }
+        StorageAdapter::HybridIndraPg => {
+            cfg!(feature = "hybrid") && wire_backend_configured(storage, wire)
+        }
         StorageAdapter::SurrealRocksdb => {
             cfg!(feature = "surreal-rocksdb")
                 && std::env::var("VALENCE_BENCH_ROCKSDB")
-                    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-                    .unwrap_or(false)
+                    .is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         }
     }
 }
@@ -326,6 +335,16 @@ pub fn extended_store_skip_reason_with_wire(
         StorageAdapter::Postgres => {
             if !cfg!(feature = "postgres") {
                 Some("enable valence-testkit/postgres".into())
+            } else {
+                Some(
+                    "configure PostgresBackendBuilder.url() or DATABASE_URL via from_env_defaults"
+                        .into(),
+                )
+            }
+        }
+        StorageAdapter::HybridIndraPg => {
+            if !cfg!(feature = "hybrid") {
+                Some("enable valence-testkit/hybrid".into())
             } else {
                 Some(
                     "configure PostgresBackendBuilder.url() or DATABASE_URL via from_env_defaults"

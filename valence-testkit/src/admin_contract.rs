@@ -16,7 +16,7 @@ use valence_core::schema_api::{
     Schema, SchemaMeta, SchemaPolicies, SchemaPolicyRule, SchemaPolicyRules, SchemaPrivacy,
 };
 use valence_core::trait_registry::TraitRegistry;
-use valence_core::DatabaseBackend;
+use valence_core::{DatabaseBackend, OwnerRef, OwnershipService};
 
 use crate::deletion_capture::reset_deletion_capture;
 use crate::harness_lock::lock_harness;
@@ -95,9 +95,15 @@ pub async fn run_admin_contract(backend: Arc<dyn DatabaseBackend>) -> Result<()>
     );
     let _traits = TraitRegistry::global().list_traits();
 
+    // Wire stores are shared across adapters (postgres + hybrid use one database);
+    // clear any leftover seed row so back-to-back contract runs stay isolated.
+    let _ = backend.delete_record("smoke", "s1").await;
     backend
         .create_record("smoke", serde_json::json!({"id": "s1", "label": "sample"}))
         .await?;
+    // A prior contract run leaves the ownership row in `pending_deletion`, which
+    // makes queue_delete_entity a no-op; reset it so the delete dispatch fires.
+    OwnershipService::ensure_active_ownership("smoke", "s1", OwnerRef::system(), &v).await?;
 
     let row = QueryCore::get_record_json("smoke", "s1", &v)
         .await?
@@ -140,14 +146,16 @@ pub async fn run_admin_contract(backend: Arc<dyn DatabaseBackend>) -> Result<()>
         .clear();
     queue_delete_entity("smoke", "s1", &v).await?;
 
-    let runs = dispatched
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    assert_eq!(runs.len(), 1, "delete dispatch should fire once");
-    assert_eq!(runs[0].root_table, "smoke");
-    assert_eq!(runs[0].root_record_id, "s1");
-    let run_id = runs[0].run_id.clone();
-    drop(runs);
+    // Drop the std MutexGuard before awaiting so the future stays Send.
+    let run_id = {
+        let runs = dispatched
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        assert_eq!(runs.len(), 1, "delete dispatch should fire once");
+        assert_eq!(runs[0].root_table, "smoke");
+        assert_eq!(runs[0].root_record_id, "s1");
+        runs[0].run_id.clone()
+    };
 
     let persisted = DeletionService::get_run_json(&run_id, &v)
         .await?

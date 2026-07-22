@@ -8,7 +8,7 @@ ENV_FILE="${INSTANCES_ENV:-$ROOT_INFRA/instances.env}"
 # shellcheck disable=SC1091
 source "$ENV_FILE"
 
-ROLE="${1:?usage: deploy-and-run.sh e2e|bench}"
+ROLE="${1:?usage: deploy-and-run.sh e2e|bench|hybrid-compare}"
 case "$ROLE" in
   e2e)
     HOST="${E2E_PUBLIC_IP}"
@@ -20,8 +20,13 @@ case "$ROLE" in
     HARDWARE="${BENCH_INSTANCE_TYPE:-$VALENCE_BENCH_HARDWARE}"
     REMOTE_CMD='./scripts/aws-e2e-bench.sh --bench all'
     ;;
+  hybrid-compare)
+    HOST="${BENCH_PUBLIC_IP}"
+    HARDWARE="${BENCH_INSTANCE_TYPE:-$VALENCE_BENCH_HARDWARE}"
+    REMOTE_CMD='./scripts/aws-e2e-bench.sh --bench hybrid-compare'
+    ;;
   *)
-    echo "role must be e2e or bench" >&2
+    echo "role must be e2e, bench, or hybrid-compare" >&2
     exit 1
     ;;
 esac
@@ -42,11 +47,13 @@ ssh "${SSH_OPTS[@]}" "${SSH_USER}@${HOST}" bash -s <<EOF
 set -euo pipefail
 # shellcheck disable=SC1091
 source "\$HOME/.cargo/env"
-export CARGO_BUILD_JOBS=1
+# Prefer parallel rustc on campaign hosts; override with CARGO_BUILD_JOBS if needed.
+export CARGO_BUILD_JOBS=\${CARGO_BUILD_JOBS:-4}
 export CARGO_INCREMENTAL=0
 export RUST_BACKTRACE=1
 export VALENCE_BENCH_HARDWARE=${HARDWARE}
 export VALENCE_BENCH_ROCKSDB=1
+export VALENCE_BENCH_RELEASE=1
 # Demo-only credentials matching compose/docker-compose.yml — not for production.
 export DATABASE_URL=postgres://valence:valence@127.0.0.1:5432/valence
 export VALENCE_MONGODB_URI=mongodb://127.0.0.1:27017
@@ -56,7 +63,7 @@ cd "\$HOME/valence"
 ${REMOTE_CMD}
 EOF
 
-if [[ "$ROLE" == "bench" ]]; then
+if [[ "$ROLE" == "bench" || "$ROLE" == "hybrid-compare" ]]; then
   mkdir -p "$REPO_ROOT/profiling/valence-bench/reports/aws"
   rsync -az -e "ssh ${SSH_OPTS[*]}" \
     "${SSH_USER}@${HOST}:~/valence/profiling/valence-bench/reports/" \

@@ -4550,9 +4550,9 @@ dependencies = [
 
 [[package]]
 name = "spin"
-version = "0.9.8"
+version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+checksum = "3763264f6b73151db08c50ff20d7d8a0b8796e021cdea7ceedad07b80155fa0e"
 dependencies = [
  "lock_api",
 ]
@@ -5621,6 +5621,7 @@ version = "0.1.1"
 dependencies = [
  "surrealdb",
  "tokio",
+ "uf-valence-backend-hybrid",
  "uf-valence-backend-indradb",
  "uf-valence-backend-mem",
  "uf-valence-backend-mongodb",
@@ -5631,6 +5632,20 @@ dependencies = [
  "uf-valence-core",
  "uf-valence-macros",
  "uf-valence-telemetry",
+]
+
+[[package]]
+name = "uf-valence-backend-hybrid"
+version = "0.1.1"
+dependencies = [
+ "async-trait",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uf-valence-backend-indradb",
+ "uf-valence-backend-mem",
+ "uf-valence-core",
+ "valence-testkit",
 ]
 
 [[package]]
@@ -5729,6 +5744,7 @@ name = "uf-valence-backend-surreal"
 version = "0.1.1"
 dependencies = [
  "async-trait",
+ "chrono",
  "inventory",
  "serde",
  "serde_json",
@@ -5934,6 +5950,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "uf-valence-backend-hybrid",
  "uf-valence-backend-mem",
  "uf-valence-backend-mongodb",
  "uf-valence-backend-postgres",
@@ -5965,6 +5982,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "uf-valence-backend-hybrid",
  "uf-valence-backend-indradb",
  "uf-valence-backend-mem",
  "uf-valence-backend-mongodb",

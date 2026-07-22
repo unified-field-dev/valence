@@ -18,6 +18,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
             SchemaField {
                 name: "name".to_string(),
@@ -33,6 +34,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
             SchemaField {
                 name: "email".to_string(),
@@ -48,6 +50,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
             SchemaField {
                 name: "secret".to_string(),
@@ -63,6 +66,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
         ]);
 
@@ -107,6 +111,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
             SchemaField {
                 name: "email".to_string(),
@@ -122,6 +127,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
             SchemaField {
                 name: "secret".to_string(),
@@ -137,6 +143,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
         ]);
 
@@ -178,6 +185,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
             SchemaField {
                 name: "secret".to_string(),
@@ -193,6 +201,7 @@
                 encrypted: false,
                 enum_variants: Vec::new(),
                 enum_type: None,
+                model_path: None,
             },
         ]);
 

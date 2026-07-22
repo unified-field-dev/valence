@@ -58,7 +58,10 @@ mod trait_schema;
 #[cfg(test)]
 mod parse_tests;
 
-pub use extract::{extract_default_string, extract_field_type_string, extract_validator_string};
+pub use extract::{
+    extract_default_string, extract_field_type, extract_field_type_string,
+    extract_validator_string, ExtractedFieldType,
+};
 pub use file::{parse_schema_file, parse_trait_file, FileParseError};
 pub use parse::*;
 pub use trait_schema::{ParsedTraitSchema, TraitSchemaItem, TraitSchemaSpec};

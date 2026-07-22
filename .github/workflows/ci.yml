@@ -30,6 +30,31 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings -A missing-docs
+      - name: Deny rustc warnings (isolated crates)
+        # Workspace feature unification can hide dead_code that only appears on
+        # single-crate builds (cargo publish / package verify). Match that surface.
+        run: |
+          export RUSTFLAGS="-D warnings"
+          for pkg in \
+            uf-valence-core \
+            uf-valence-schema-dsl \
+            uf-valence-telemetry \
+            uf-valence-macros \
+            uf-valence-backend-sql \
+            uf-valence-backend-mem \
+            uf-valence-codegen \
+            uf-valence
+          do
+            echo "==> cargo check -p $pkg"
+            cargo check -p "$pkg"
+          done
+          echo "==> uf-valence-core feature slices"
+          cargo check -p uf-valence-core --no-default-features --features instrumentation
+          cargo check -p uf-valence-core --no-default-features --features instrumentation,compiler-sql
+          cargo check -p uf-valence-core --no-default-features --features instrumentation,compiler-surreal
+          cargo check -p uf-valence-core --no-default-features --features instrumentation,compiler-mongodb
+          cargo check -p uf-valence-core --no-default-features --features instrumentation,compiler-redis
+          cargo check -p uf-valence-core --no-default-features --features instrumentation,compiler-indradb
       - name: Reclaim disk after clippy
         run: |
           # Clippy and tests share CARGO_TARGET_DIR; drop intermediates before the full test build.
@@ -173,12 +198,13 @@ jobs:
         run: bash scripts/gate.sh
       - name: Codegen / runtime verify
         run: |
-          cargo test -p uf-valence-core
-          cargo test -p uf-valence-codegen
-          cargo test -p valence-testkit
-          cargo test -p valence-e2e --test admin_runtime_catalog
-          cargo test -p codegen-host --test compile_generated_models
-          cargo test -p product-model-host --test model_contract
+          cargo test -p uf-valence-core -- --test-threads=1
+          cargo test -p uf-valence-codegen -- --test-threads=1
+          # Process-global telemetry/deletion harness state requires serial tests.
+          cargo test -p valence-testkit -- --test-threads=1
+          cargo test -p valence-e2e --test admin_runtime_catalog -- --test-threads=1
+          cargo test -p codegen-host --test compile_generated_models -- --test-threads=1
+          cargo test -p product-model-host --test model_contract -- --test-threads=1
           cargo check -p codegen-host -p product-model-host -p admin-runtime-host
       - name: Routing invariants
         run: |

@@ -24,6 +24,12 @@ sqlite = ["valence-core/sqlite", "dep:valence-backend-sqlite"]
 postgres = ["valence-core/postgres", "dep:valence-backend-postgres"]
 mongodb = ["valence-core/mongodb", "dep:valence-backend-mongodb"]
 indradb = ["valence-core/indradb", "dep:valence-backend-indradb"]
+hybrid = [
+    "valence-core/hybrid",
+    "dep:valence-backend-hybrid",
+    "dep:valence-backend-indradb",
+    "dep:valence-backend-postgres",
+]
 redis = ["valence-core/redis", "dep:valence-backend-redis"]
 surreal = ["valence-core/compiler-surreal", "dep:valence-backend-surreal", "valence-backend-surreal/embedded-mem"]
 surreal-rocksdb = ["surreal", "valence-backend-surreal/embedded-rocksdb"]
@@ -41,6 +47,7 @@ valence-backend-sqlite = { workspace = true, optional = true }
 valence-backend-postgres = { workspace = true, optional = true }
 valence-backend-mongodb = { workspace = true, optional = true }
 valence-backend-indradb = { workspace = true, optional = true }
+valence-backend-hybrid = { workspace = true, optional = true }
 valence-backend-redis = { workspace = true, optional = true }
 valence-backend-surreal = { workspace = true, optional = true }
 
@@ -56,6 +63,10 @@ required-features = ["mem"]
 [[example]]
 name = "multi_backend"
 required-features = ["mem"]
+
+[[example]]
+name = "hybrid_multi_logical"
+required-features = ["hybrid", "mem"]
 
 [[example]]
 name = "quickstart_sqlite"

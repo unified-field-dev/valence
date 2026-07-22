@@ -2,6 +2,8 @@
 
 mod port;
 
+#[cfg(feature = "compiler-hybrid")]
+mod hybrid_compiler;
 #[cfg(feature = "compiler-indradb")]
 mod indradb_compiler;
 #[cfg(feature = "compiler-mongodb")]
@@ -15,6 +17,8 @@ mod surreal_compiler;
 
 pub use port::{BackendCapabilities, DatabaseBackend};
 
+#[cfg(feature = "compiler-hybrid")]
+pub use hybrid_compiler::HybridQueryCompiler;
 #[cfg(feature = "compiler-indradb")]
 pub use indradb_compiler::IndraQueryCompiler;
 #[cfg(feature = "compiler-mongodb")]

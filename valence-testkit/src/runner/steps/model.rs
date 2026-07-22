@@ -93,6 +93,9 @@ async fn graph_edge(session: &mut BootstrapSession, mode: RunMode) -> Result<(),
         return Ok(());
     }
     let table = "graph_edge_smoke";
+    // Wire stores are shared across matrix rows; clear leftovers from prior runs.
+    let _ = backend.delete_record(table, "n1").await;
+    let _ = backend.delete_record(table, "n2").await;
     backend
         .create_record(table, serde_json::json!({"id": "n1", "name": "left"}))
         .await
@@ -139,8 +142,7 @@ async fn query_filter_eq(session: &mut BootstrapSession, mode: RunMode) -> Resul
     // Unique names so prior catalog scenarios on shared wire DBs cannot collide.
     let tag = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
+        .map_or(0, |d| d.as_nanos());
     let alpha = format!("alpha-filter-{tag}");
     let beta = format!("beta-filter-{tag}");
     seed_named(session, &[&alpha, &beta]).await?;

@@ -377,6 +377,12 @@ pub use valence_backend_indradb::{
     IndradbBackend, ENGINE_ID as INDRADB_ENGINE_ID, PRIMARY as INDRADB_PRIMARY,
 };
 
+#[cfg(feature = "hybrid")]
+pub use valence_backend_hybrid::{
+    CachePolicy, CacheRules, HybridBackend, HybridBackendBuilder, ENGINE_ID as HYBRID_ENGINE_ID,
+    PRIMARY as HYBRID_PRIMARY,
+};
+
 #[cfg(feature = "redis")]
 pub use valence_backend_redis::{
     RedisBackend, ENGINE_ID as REDIS_ENGINE_ID, PRIMARY as REDIS_PRIMARY,
@@ -415,10 +421,10 @@ pub mod __internal {
 /// Ergonomic imports for schema authoring and generated models.
 pub mod prelude {
     pub use crate::{
-        valence_schema, valence_trait_schema, Cardinality, Database, DatabaseEvaluator,
-        DatabaseFromEngine, FieldChange, FieldOperation, FieldType, IdHolder, Model, Mutation,
-        MutationKind, OnDelete, RecordId, Reference, Role, SideEffect, Validator, WithReference,
-        DEFAULT_IN_MEMORY, DEFAULT_IN_MEMORY_ROUTER_KEY,
+        valence_schema, valence_trait_schema, Cardinality, Currency, CurrencyCode, Database,
+        DatabaseEvaluator, DatabaseFromEngine, FieldChange, FieldOperation, FieldType, IdHolder,
+        JsonAsSerdeError, Model, Mutation, MutationKind, OnDelete, RecordId, Reference, Role,
+        SideEffect, Validator, WithReference, DEFAULT_IN_MEMORY, DEFAULT_IN_MEMORY_ROUTER_KEY,
     };
 }
 

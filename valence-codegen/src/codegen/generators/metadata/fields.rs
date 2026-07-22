@@ -81,6 +81,13 @@ pub(super) fn schema_field_and_edge_tokens(
     let encrypted = field.encrypted;
     let unique = field.unique;
 
+    let model_path_code = if let Some(ref path) = field.model_path {
+        let lit = LitStr::new(path, proc_macro2::Span::call_site());
+        quote! { Some(#lit.to_string()) }
+    } else {
+        quote! { None }
+    };
+
     let row = quote! {
         valence::SchemaField {
             name: #field_name_lit.to_string(),
@@ -96,6 +103,7 @@ pub(super) fn schema_field_and_edge_tokens(
             encrypted: #encrypted,
             enum_variants: Vec::new(),
             enum_type: None,
+            model_path: #model_path_code,
         }
     };
 

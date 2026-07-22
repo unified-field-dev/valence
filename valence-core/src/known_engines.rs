@@ -14,4 +14,6 @@ impl KnownEngines {
     pub const MONGODB: &'static str = "mongodb";
     pub const REDIS: &'static str = "redis";
     pub const INDRADB: &'static str = "indradb";
+    /// Postgres (or SQL) primary with embedded IndraDB read-through cache.
+    pub const HYBRID_INDRA_SQL: &'static str = "hybrid_indra_sql";
 }

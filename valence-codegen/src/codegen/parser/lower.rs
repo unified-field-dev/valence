@@ -16,21 +16,28 @@ pub fn lower_parsed_schema(parsed: &ParsedSchema) -> Schema {
     let (fields, edges) = lower_fields(&parsed.fields);
     let mut connections = lower_connections(&parsed.connections, &parsed.table_name);
     if connections.is_empty() {
-        connections = edges
+        connections = fields
             .iter()
-            .map(|e| SchemaConnection {
-                name: e.from_field.clone(),
-                from_table: parsed.table_name.clone(),
-                from_field: e.from_field.clone(),
-                to_table: e.to_table.clone(),
-                cardinality: "HasOne".to_string(),
-                required: true,
-                on_delete: "Cascade".to_string(),
-                label: e.label.clone(),
-                model_path: None,
-                reverse_field: None,
-                edge_table: None,
-                target_trait: None,
+            .filter(|f| f.fk.is_some())
+            .map(|f| {
+                let ref_table =
+                    f.fk.as_ref()
+                        .map(|fk| fk.ref_table.clone())
+                        .unwrap_or_default();
+                SchemaConnection {
+                    name: f.name.clone(),
+                    from_table: parsed.table_name.clone(),
+                    from_field: f.name.clone(),
+                    to_table: ref_table,
+                    cardinality: "HasOne".to_string(),
+                    required: true,
+                    on_delete: "Cascade".to_string(),
+                    label: edge_label(&f.name),
+                    model_path: f.model_path.clone(),
+                    reverse_field: None,
+                    edge_table: None,
+                    target_trait: None,
+                }
             })
             .collect();
     }
@@ -151,6 +158,7 @@ fn lower_fields(fields: &[ParsedField]) -> (Vec<SchemaField>, Vec<SchemaEdge>) {
             encrypted: field.encrypted,
             enum_variants,
             enum_type,
+            model_path: field.model_path.clone(),
         });
     }
 

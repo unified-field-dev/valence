@@ -22,11 +22,13 @@ compiler-surreal = []
 compiler-mongodb = []
 compiler-redis = []
 compiler-indradb = []
+compiler-hybrid = ["compiler-sql"]
 sqlite = ["compiler-sql"]
 postgres = ["compiler-sql"]
 mongodb = ["compiler-mongodb"]
 redis = ["compiler-redis"]
 indradb = ["compiler-indradb"]
+hybrid = ["compiler-hybrid"]
 
 [dependencies]
 async-trait = { workspace = true }
@@ -44,7 +46,7 @@ regex = "1"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
-valence-backend-mem = { workspace = true }
+valence-backend-mem = { path = "../valence-backend-mem", package = "uf-valence-backend-mem" }
 
 [lints]
 workspace = true

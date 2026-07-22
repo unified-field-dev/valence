@@ -80,6 +80,9 @@ pub struct SchemaField {
     pub enum_variants: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enum_type: Option<String>,
+    /// Explicit model path from `Record(…).target(…)` (connection / query hops).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_path: Option<String>,
 }
 
 /// Edge/relationship definition retained for older schema shapes.
@@ -172,6 +175,10 @@ pub struct Schema {
     pub meta: SchemaMeta,
 }
 
+#[allow(
+    clippy::trivially_copy_pass_by_ref,
+    reason = "serde's `skip_serializing_if` callback signature passes field values by reference"
+)]
 fn is_false(value: &bool) -> bool {
     !*value
 }

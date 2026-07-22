@@ -7,7 +7,7 @@ use syn::LitStr;
 use crate::codegen::schema::SchemaContext;
 
 use super::target::{
-    is_same_crate_connection, resolve_target_query_type, resolve_target_query_type_with_lifetime,
+    emits_typed_connection_hop, resolve_target_query_type, resolve_target_query_type_with_lifetime,
 };
 
 pub(super) fn collect_connection_hop_methods(
@@ -71,7 +71,7 @@ fn push_has_one(
         }
     });
 
-    if is_same_crate_connection(conn) {
+    if emits_typed_connection_hop(conn) {
         let hop_method_name = format_ident!("query_{}", from_field);
         let target_query_type = resolve_target_query_type(conn);
         let target_query_type_lt = resolve_target_query_type_with_lifetime(conn);
@@ -88,7 +88,7 @@ fn push_has_one(
                         fk_field: #from_field_lit.to_string(),
                     },
                 });
-                #target_query_type { inner: target, valence }
+                #target_query_type::from_parts(target, valence)
             }
         });
     }
@@ -129,7 +129,7 @@ fn push_has_many(
         }
     });
 
-    if is_same_crate_connection(conn) {
+    if emits_typed_connection_hop(conn) {
         let hop_method_name = format_ident!("query_{}", conn_name);
         let target_query_type = resolve_target_query_type(conn);
         let target_query_type_lt = resolve_target_query_type_with_lifetime(conn);
@@ -146,7 +146,7 @@ fn push_has_many(
                         reverse_field: #reverse_field_lit.to_string(),
                     },
                 });
-                #target_query_type { inner: target, valence }
+                #target_query_type::from_parts(target, valence)
             }
         });
     }
@@ -200,7 +200,7 @@ fn push_many_to_many(
         }
     });
 
-    if is_same_crate_connection(conn) {
+    if emits_typed_connection_hop(conn) {
         let hop_method_name = format_ident!("query_{}", conn_name);
         let target_query_type = resolve_target_query_type(conn);
         let target_query_type_lt = resolve_target_query_type_with_lifetime(conn);
@@ -217,7 +217,7 @@ fn push_many_to_many(
                         edge_table: #edge_table_lit.to_string(),
                     },
                 });
-                #target_query_type { inner: target, valence }
+                #target_query_type::from_parts(target, valence)
             }
         });
     }
@@ -252,7 +252,7 @@ fn push_has_one_trait_target(
                     fk_field: #from_field_lit.to_string(),
                 },
             });
-            #target_query_all { inner: target, valence }
+            #target_query_all::from_parts(target, valence)
         }
     });
 }
@@ -285,7 +285,7 @@ fn push_has_many_trait_target(
                 parent_table,
                 source,
             );
-            #target_query_all { inner: target, valence }
+            #target_query_all::from_parts(target, valence)
         }
     });
 }

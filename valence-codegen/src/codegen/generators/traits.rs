@@ -71,20 +71,6 @@ fn schema_trait_query_order_by_delegates(trait_def: &ParsedTraitDef) -> Vec<Toke
         .collect()
 }
 
-fn query_builder_parts_bridge_tokens(query_name: &proc_macro2::Ident) -> TokenStream {
-    quote! {
-        impl<'a> #query_name<'a> {
-            pub fn into_parts(self) -> (valence::QueryCore, &'a valence::Valence) {
-                (self.inner, self.valence)
-            }
-
-            pub fn from_parts(inner: valence::QueryCore, valence: &'a valence::Valence) -> Self {
-                Self { inner, valence }
-            }
-        }
-    }
-}
-
 fn schema_trait_named_fields_impl(
     struct_name: &proc_macro2::Ident,
     fields_trait: &proc_macro2::Ident,
@@ -188,6 +174,7 @@ fn schema_trait_impl_bundle(
     }
 }
 
+#[allow(clippy::unnecessary_wraps)] // Result kept for uniform generator API
 pub fn generate_trait_impls(
     schema: &SchemaContext,
     trait_defs: &HashMap<String, ParsedTraitDef>,
@@ -196,10 +183,6 @@ pub fn generate_trait_impls(
     let struct_name = format_ident!("{}", to_pascal_case(&schema.table_name));
     let query_name = format_ident!("{}Query", struct_name);
     let table_snake = schema.table_name.as_str();
-
-    if !schema.schema.traits.is_empty() {
-        tokens.extend(query_builder_parts_bridge_tokens(&query_name));
-    }
 
     for trait_name in &schema.schema.traits {
         let Some(trait_def) = trait_defs.get(trait_name) else {

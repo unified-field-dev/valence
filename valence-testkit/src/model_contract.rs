@@ -104,6 +104,37 @@ pub async fn backend_for_storage(
                 Ok(Arc::new(IndradbBackend::new()))
             }
         }
+        StorageAdapter::HybridIndraPg => {
+            #[cfg(not(feature = "hybrid"))]
+            {
+                return Err(valence_core::Error::Internal(
+                    "enable valence-testkit/hybrid".into(),
+                ));
+            }
+            #[cfg(feature = "hybrid")]
+            {
+                use valence_backend_hybrid::HybridBackend;
+                use valence_backend_postgres::PostgresBackendBuilder;
+                let builder = wire
+                    .and_then(|o| o.postgres.clone())
+                    .unwrap_or_else(PostgresBackendBuilder::new);
+                let primary = Arc::new(
+                    builder
+                        .from_env_defaults()
+                        .build()
+                        .await
+                        .map_err(|e| valence_core::Error::Internal(e.to_string()))?,
+                );
+                Ok(Arc::new(
+                    HybridBackend::builder()
+                        .primary(primary)
+                        .warm_edges(true)
+                        .build()
+                        .await
+                        .map_err(|e| valence_core::Error::Internal(e.to_string()))?,
+                ))
+            }
+        }
         StorageAdapter::Redis => {
             #[cfg(not(feature = "redis"))]
             {

@@ -1,5 +1,11 @@
 //! Matrix-driven catalog tests for Valence e2e.
 
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::print_stdout,
+    clippy::print_stderr
+)]
 #[cfg(feature = "surreal-inventory")]
 mod support;
 
@@ -58,6 +64,20 @@ fn matrix_surreal_rocksdb_catalog() {
         return;
     }
     run_storage_catalog(StorageAdapter::SurrealRocksdb);
+}
+
+#[test]
+#[cfg(feature = "postgres")]
+fn matrix_postgres_catalog() {
+    // Entries skip individually with a reason when DATABASE_URL is not configured.
+    run_storage_catalog(StorageAdapter::Postgres);
+}
+
+#[test]
+#[cfg(feature = "hybrid")]
+fn matrix_hybrid_catalog() {
+    // Entries skip individually with a reason when DATABASE_URL is not configured.
+    run_storage_catalog(StorageAdapter::HybridIndraPg);
 }
 
 #[test]

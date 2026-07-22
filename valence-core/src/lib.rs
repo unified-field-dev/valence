@@ -37,6 +37,8 @@
 //!   (use `valence-backend-*` and separate host adapters)
 //! - Host-owned codegen lives in `valence-codegen`, not here
 
+#![cfg_attr(test, allow(clippy::expect_used, clippy::unwrap_used))]
+
 extern crate self as valence_core;
 
 pub mod actor;
@@ -46,12 +48,15 @@ pub mod batch;
 pub mod compiled_query;
 pub mod compiled_query_factory;
 pub mod connection;
+pub mod currency;
 pub mod database_retry;
+pub mod datetime_unix;
 pub mod deletion;
 pub mod entity;
 pub mod error;
 pub mod evaluator;
 pub mod iter;
+pub mod json_as;
 pub mod known_engines;
 pub mod model;
 pub mod owner_ref;
@@ -65,7 +70,9 @@ pub mod query_compiler_registry;
 pub mod read_cache;
 pub mod record_id;
 pub mod reference;
+pub mod register_logical;
 pub mod registry;
+pub mod request_cache;
 pub mod router;
 pub mod router_key;
 pub mod row_json;
@@ -108,6 +115,7 @@ pub use connection::{
     extract_id_from_record, extract_id_from_record_display, extract_id_from_select_value,
     id_from_model, Cardinality, IdHolder, OnDelete,
 };
+pub use currency::{Currency, CurrencyCode, CurrencyError, ParseCurrencyCodeError};
 pub use database_retry::retry_on_database_tx_conflict;
 pub use deletion::{
     dispatch, is_deletion_dispatcher_registered, register_deletion_dispatcher,
@@ -144,6 +152,11 @@ pub use read_cache::{
 };
 pub use record_id::RecordId;
 pub use reference::{Reference, ReferencedEntity, WithReference};
+pub use register_logical::{
+    register_backend_logical_names, register_backend_logical_names_slices,
+    RegisterBackendLogicalNamesOptions,
+};
+pub use request_cache::RequestPermissionCache;
 pub use router::DatabaseRouter;
 pub use router_key::router_key;
 pub use runtime::{
@@ -157,7 +170,7 @@ pub use schema_api::{
     ForeignKeyRef, Schema, SchemaConnection, SchemaEdge, SchemaField, SchemaMeta, SchemaPolicies,
     SchemaPolicyRule, SchemaPolicyRules, SchemaPrivacy,
 };
-pub use schema_types::{FieldType, Role, Validator};
+pub use schema_types::{FieldType, JsonAsSerdeError, Role, Validator};
 pub use side_effect::{FieldChange, Mutation, MutationKind, SideEffect};
 pub use trait_registry::TraitRegistry;
 pub use trait_schema::{
