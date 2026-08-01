@@ -160,6 +160,12 @@ pub async fn create_record_sqlite(
     content: Value,
 ) -> Result<Value> {
     ensure_table_sqlite(pool, table).await?;
+    let mut content = content;
+    valence_core::ttl::prepare_create_content_with_capability(
+        table,
+        valence_core::ttl::BackendTtlCapability::Deferred,
+        &mut content,
+    )?;
     let id = storage_id(&content).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let mut body = upsert_body_fields(content);
     body.remove("id");

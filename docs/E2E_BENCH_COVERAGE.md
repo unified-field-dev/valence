@@ -96,7 +96,12 @@ Living coverage map for Valence. Status legend:
 
 ### Schema extras
 
-TTL, side effects, iters, trait mixin, encrypted fields — mostly `N` / codegen-only; schedule after query+hop program.
+| Feature | Happy | Sad | Notes |
+|---------|-------|-----|-------|
+| Table TTL (create-only) | P | P | Unit: `ttl::stamp::*`, `ttl::ensure::*`. Scenarios: `ttl-deferred-stamp`, `ttl-create-only-no-refresh`, `ttl-non-native-warn`. Redis/Mongo native EXPIRE/index via adapter integration when URL/URI set. Bench: **not required** (correctness fill). Platform sweeper: Future (DESIGN). |
+| Side effects / iters / trait mixin / encrypted | N | N | Codegen-only; schedule after query+hop program. |
+
+Registered campaign scenario IDs (CI unit/integration primary; AWS execute optional): `ttl-deferred-stamp`, `ttl-create-only-no-refresh`, `ttl-non-native-warn`.
 
 ## Storage × suite
 

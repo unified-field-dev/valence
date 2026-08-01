@@ -211,6 +211,8 @@ impl DatabaseBackend for InMemoryBackend {
         table: &str,
         content: serde_json::Value,
     ) -> Result<serde_json::Value> {
+        let mut content = content;
+        valence_core::ttl::prepare_create_content(table, self, &mut content)?;
         let id = storage_id_from_content(&content).unwrap_or_else(uuid_simple);
         let mut record = content;
         if let Some(obj) = record.as_object_mut() {
@@ -324,6 +326,10 @@ impl DatabaseBackend for InMemoryBackend {
             })
             .unwrap_or_default())
     }
+
+    fn ttl_capability(&self) -> valence_core::ttl::BackendTtlCapability {
+        valence_core::ttl::BackendTtlCapability::Deferred
+    }
 }
 
 fn edge_key(edge_table: &str, from: &RecordId) -> String {
@@ -386,5 +392,14 @@ mod tests {
 
         backend.delete_record("user", &id).await.unwrap();
         assert!(backend.get_record("user", &id).await.unwrap().is_none());
+    }
+
+    #[test]
+    fn ttl_capability_is_deferred() {
+        let backend = InMemoryBackend::new();
+        assert_eq!(
+            backend.ttl_capability(),
+            valence_core::ttl::BackendTtlCapability::Deferred
+        );
     }
 }

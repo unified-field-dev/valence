@@ -9,6 +9,7 @@ use mongodb::options::IndexOptions;
 use mongodb::{Client, Collection, IndexModel};
 use serde_json::{Map, Value};
 
+use valence_core::ttl::{SchemaTtlPolicy, EXPIRE_AT_FIELD};
 use valence_core::{
     BackendCapabilities, CompiledQuery, Database, DatabaseBackend, DatabaseFromEngine, Error,
     KnownEngines, RecordId, Result,
@@ -310,6 +311,8 @@ impl DatabaseBackend for MongoBackend {
 
     async fn create_record(&self, table: &str, content: Value) -> Result<Value> {
         Self::assert_safe_table(table)?;
+        let mut content = content;
+        valence_core::ttl::prepare_create_content(table, self, &mut content)?;
         self.check_unique_fields(table, &content, None).await?;
         let id = storage_id(&content).unwrap_or_else(uuid_simple);
         let mut record = content;
@@ -456,6 +459,16 @@ impl DatabaseBackend for MongoBackend {
             .map_err(|e| Error::database(e.to_string()))?;
         Ok(())
     }
+
+    fn ttl_capability(&self) -> valence_core::ttl::BackendTtlCapability {
+        crate::ttl::ttl_capability()
+    }
+
+    async fn apply_ttl_policy(&self, table: &str, _policy: &SchemaTtlPolicy) -> Result<()> {
+        Self::assert_safe_table(table)?;
+        let coll = self.collection(table);
+        crate::ttl::apply_ttl_policy(&coll).await
+    }
 }
 
 #[allow(clippy::needless_pass_by_value)] // map_err adapter; value only Display'd
@@ -473,6 +486,17 @@ fn body_document(record: &Value) -> Document {
         for (k, v) in obj {
             if k == "id" {
                 continue;
+            }
+            if k == EXPIRE_AT_FIELD {
+                if let Some(s) = v.as_str() {
+                    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(s) {
+                        doc.insert(
+                            k.clone(),
+                            mongodb::bson::DateTime::from_millis(dt.timestamp_millis()),
+                        );
+                        continue;
+                    }
+                }
             }
             doc.insert(k.clone(), MongoBackend::value_to_bson(v));
         }

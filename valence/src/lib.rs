@@ -8,6 +8,8 @@
 //!
 //! - **Schema DSL** — fields, connections, policies, ownership, TTL, and trait mixins
 //!   ([`valence_schema!`], [`valence_trait_schema!`])
+//! - **Table TTL** — declare `ttl: { seconds }` on a schema; call [`Valence::ensure_ttl_for_all`]
+//!   once at boot ([`ttl`] module: native Redis/Mongo, Deferred stamp + warn otherwise)
 //! - **Build-time codegen** — typed models from host `schemas/` via `valence-codegen`
 //! - **Composable backends** — in-memory, SQLite, IndraDB, SurrealDB, Postgres, MongoDB, Redis
 //! - **Multi-backend routing** — one [`DatabaseRouter`]; each schema picks a backend with
@@ -188,6 +190,13 @@
 //! Macros and `valence-codegen` share one syn DSL parser (`valence-schema-dsl`), so
 //! host `schemas/*_valence_schema.rs` files accept the same syntax and semantics
 //! (including `database:` evaluators).
+//!
+//! ### Declare and ensure TTL
+//!
+//! Add `ttl: { seconds: N }` on a table schema (create-only clock). After backends are
+//! registered, call [`Valence::ensure_ttl_for_all`] once — it scrapes the schema registry
+//! for every TTL table (no hand list). See the [`ttl`] module for capabilities, the reserved
+//! [`ttl::EXPIRE_AT_FIELD`], and Deferred/non-native warnings.
 //!
 //! ## 3. Set up build-time codegen
 //!
@@ -394,6 +403,8 @@ extern crate self as valence;
 mod include_generated;
 
 pub use valence_core::*;
+/// Table-level TTL policy, stamp helpers, and ensure entry points.
+pub use valence_core::ttl;
 pub use valence_macros::*;
 
 #[cfg(feature = "telemetry-console")]

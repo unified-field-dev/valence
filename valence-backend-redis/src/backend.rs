@@ -4,6 +4,7 @@ use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use serde_json::{Map, Value};
 
+use valence_core::ttl::SchemaTtlPolicy;
 use valence_core::{
     BackendCapabilities, CompiledQuery, Database, DatabaseBackend, DatabaseFromEngine, Error,
     KnownEngines, RecordId, Result,
@@ -184,11 +185,19 @@ impl RedisBackend {
             if let Some(row) = self.get_record(table, &id).await? {
                 rows.push(row);
             }
+            // get_record already SREMs orphans when the doc key expired
             if limit.is_some_and(|n| rows.len() >= n) {
                 break;
             }
         }
         Ok(rows)
+    }
+
+    async fn apply_create_ttl(&self, table: &str, id: &str, record: &Value) -> Result<()> {
+        let mut conn = self.conn.clone();
+        crate::ttl::expire_doc_key(&mut conn, &self.keys, table, id).await?;
+        let fields = self.unique_fields(table).await?;
+        crate::ttl::expire_uniq_keys(&mut conn, &self.keys, table, record, &fields).await
     }
 
     fn execute_redis_descriptor(descriptor: &Value) -> Result<(String, Option<usize>)> {
@@ -289,6 +298,10 @@ impl DatabaseBackend for RedisBackend {
         let key = self.keys.doc(table, id);
         let mut conn = self.conn.clone();
         let raw: Option<String> = conn.get(&key).await.map_err(Self::map_err)?;
+        if raw.is_none() {
+            crate::ttl::srem_orphan_id(&mut conn, &self.keys, table, id).await?;
+            return Ok(None);
+        }
         Ok(raw.map(|text| {
             let body: Value =
                 serde_json::from_str(&text).unwrap_or_else(|_| Value::Object(Map::new()));
@@ -298,6 +311,8 @@ impl DatabaseBackend for RedisBackend {
 
     async fn create_record(&self, table: &str, content: Value) -> Result<Value> {
         Self::assert_safe_table(table)?;
+        let mut content = content;
+        valence_core::ttl::prepare_create_content(table, self, &mut content)?;
         let id = storage_id(&content).unwrap_or_else(uuid_simple);
         let mut record = content;
         if let Some(obj) = record.as_object_mut() {
@@ -317,6 +332,7 @@ impl DatabaseBackend for RedisBackend {
             .await
             .map_err(Self::map_err)?;
         let _: () = conn.sadd(&ids_key, &id).await.map_err(Self::map_err)?;
+        self.apply_create_ttl(table, &id, &record).await?;
         Ok(record)
     }
 
@@ -442,6 +458,14 @@ impl DatabaseBackend for RedisBackend {
             }
         }
         Ok(())
+    }
+
+    fn ttl_capability(&self) -> valence_core::ttl::BackendTtlCapability {
+        crate::ttl::ttl_capability()
+    }
+
+    async fn apply_ttl_policy(&self, table: &str, policy: &SchemaTtlPolicy) -> Result<()> {
+        crate::ttl::apply_ttl_policy(table, policy.seconds).await
     }
 }
 

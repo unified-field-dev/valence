@@ -85,6 +85,8 @@ mod imp {
             content: serde_json::Value,
         ) -> Result<serde_json::Value> {
             ensure_schemaless_table(&self.db, table).await?;
+            let mut content = content;
+            valence_core::ttl::prepare_create_content(table, self, &mut content)?;
             let explicit_id = content
                 .get("id")
                 .and_then(|v| v.as_str())

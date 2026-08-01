@@ -1,7 +1,5 @@
 //! Valence core ports: storage routing, host-injectable traits, and runtime builder.
 //!
-//! **Audience:** adapter authors, host integrators, and generated model code.
-//!
 //! ## Stack position
 //!
 //! ```text
@@ -16,6 +14,8 @@
 //! - [`DatabaseRouter`] — heterogeneous engine registry
 //! - [`ports`] — secrets, actor, endpoints (host-injectable)
 //! - [`Model`] — generated CRUD surface
+//! - [`ttl`] — schema TTL policy, [`prepare_create_content`], ensure via
+//!   [`Valence::ensure_ttl_for_all`] / [`Valence::ensure_ttl_for_table`]
 //!
 //! ## Examples
 //!
@@ -36,6 +36,7 @@
 //! - Engine SDKs and product host crates must never appear in this crate
 //!   (use `valence-backend-*` and separate host adapters)
 //! - Host-owned codegen lives in `valence-codegen`, not here
+//! - Table TTL is create-only; Deferred backends need the platform sweeper (Future)
 
 #![cfg_attr(test, allow(clippy::expect_used, clippy::unwrap_used))]
 
@@ -190,7 +191,9 @@ pub use trait_schema::{
     TraitDefinition, TraitDefinitionInit, TraitFieldDef, TraitImplementor, TraitPolicies,
     TraitPolicyRules,
 };
-pub use ttl::{BackendTtlCapability, SchemaTtlPolicy};
+pub use ttl::{
+    prepare_create_content, BackendTtlCapability, SchemaTtlPolicy, EXPIRE_AT_FIELD,
+};
 pub use valence_telemetry::{ConsoleSink, NoOpSink, TelemetrySink};
 
 #[cfg(feature = "instrumentation")]
