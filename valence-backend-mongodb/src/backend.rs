@@ -204,6 +204,21 @@ impl MongoBackend {
             if k == "_id" {
                 continue;
             }
+            if k == EXPIRE_AT_FIELD {
+                if let mongodb::bson::Bson::DateTime(dt) = v {
+                    let millis = dt.timestamp_millis();
+                    let chrono_dt = chrono::DateTime::from_timestamp_millis(millis)
+                        .unwrap_or_else(|| chrono::DateTime::UNIX_EPOCH);
+                    map.insert(
+                        k,
+                        Value::String(
+                            chrono_dt
+                                .to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                        ),
+                    );
+                    continue;
+                }
+            }
             map.insert(k, bson_to_json(v));
         }
         row_from_body(table, id, Value::Object(map))
@@ -325,8 +340,11 @@ impl DatabaseBackend for MongoBackend {
         let mut doc = body_document(&record);
         doc.insert("_id", id.clone());
         let coll = self.collection(table);
-        coll.insert_one(doc).await.map_err(map_duplicate_key)?;
-        Ok(record)
+        coll.insert_one(doc.clone())
+            .await
+            .map_err(map_duplicate_key)?;
+        // Return the persisted row so TTL DateTime round-trips match get/merge.
+        Ok(Self::doc_to_row(table, &id, doc))
     }
 
     async fn update_record(&self, table: &str, id: &str, content: Value) -> Result<Value> {

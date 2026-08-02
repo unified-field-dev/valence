@@ -1,7 +1,7 @@
 //! Redis wire [`DatabaseBackend`] using JSON documents in Redis STRING keys.
 
 use redis::aio::ConnectionManager;
-use redis::AsyncCommands;
+use redis::{AsyncCommands, SetExpiry, SetOptions};
 use serde_json::{Map, Value};
 
 use valence_core::ttl::SchemaTtlPolicy;
@@ -352,8 +352,13 @@ impl DatabaseBackend for RedisBackend {
         let body_text = serde_json::to_string(&body).map_err(Error::from)?;
         let doc_key = self.keys.doc(table, id);
         let mut conn = self.conn.clone();
+        // KEEPTTL: plain SET clears EXPIRE and would refresh create-only TTL.
         let _: () = conn
-            .set(&doc_key, &body_text)
+            .set_options(
+                &doc_key,
+                &body_text,
+                SetOptions::default().with_expiration(SetExpiry::KEEPTTL),
+            )
             .await
             .map_err(Self::map_err)?;
         Ok(record)
@@ -379,7 +384,11 @@ impl DatabaseBackend for RedisBackend {
         let ids_key = self.keys.table_ids(table);
         let mut conn = self.conn.clone();
         let _: () = conn
-            .set(&doc_key, &body_text)
+            .set_options(
+                &doc_key,
+                &body_text,
+                SetOptions::default().with_expiration(SetExpiry::KEEPTTL),
+            )
             .await
             .map_err(Self::map_err)?;
         let _: () = conn.sadd(&ids_key, id).await.map_err(Self::map_err)?;
