@@ -291,8 +291,48 @@ pub fn embedded_catalog() -> &'static [CatalogEntry] {
         entry("m2m-relate-smoke", PathKind::Happy, |_| {
             ScenarioSpec::m2m_relate_smoke()
         }),
+        entry("ttl-native-expire", PathKind::Happy, |storage| {
+            ScenarioSpec::ttl_native_expire(ttl_record_id(storage, "native"))
+        }),
+        entry("ttl-deferred-stamp", PathKind::Happy, |storage| {
+            ScenarioSpec::ttl_deferred_stamp(ttl_record_id(storage, "deferred"))
+        }),
+        entry("ttl-create-only-no-refresh", PathKind::Happy, |storage| {
+            ScenarioSpec::ttl_create_only_no_refresh(ttl_record_id(storage, "create_only"))
+        }),
+        entry_sad("ttl-non-native-warn", |_| ScenarioSpec::ttl_non_native_warn()),
     ];
     CATALOG
+}
+
+fn ttl_record_id(storage: StorageAdapter, kind: &str) -> String {
+    format!("ttl_{}_{kind}", storage.slug())
+}
+
+/// Whether a TTL catalog entry applies to this storage adapter.
+fn ttl_catalog_applies(entry_id: &str, storage: StorageAdapter) -> bool {
+    if !entry_id.starts_with("ttl-") {
+        return true;
+    }
+    if matches!(storage, StorageAdapter::AcmeStub) {
+        return false;
+    }
+    match entry_id {
+        "ttl-native-expire" => matches!(
+            storage,
+            StorageAdapter::Redis | StorageAdapter::MongoDb
+        ),
+        "ttl-deferred-stamp" => !matches!(
+            storage,
+            StorageAdapter::Redis | StorageAdapter::MongoDb
+        ),
+        "ttl-create-only-no-refresh" => !matches!(storage, StorageAdapter::IndraDb),
+        "ttl-non-native-warn" => !matches!(
+            storage,
+            StorageAdapter::Redis | StorageAdapter::MongoDb
+        ),
+        _ => true,
+    }
 }
 
 /// Storage adapters participating in default PR CI matrix.
@@ -338,6 +378,10 @@ pub async fn run_catalog_entry(entry: &CatalogEntry, storage: StorageAdapter) {
     }
 
     if entry.generated_model_only && !storage.supports_model_runtime() {
+        return;
+    }
+
+    if !ttl_catalog_applies(entry.id, storage) {
         return;
     }
 
@@ -423,6 +467,9 @@ pub fn catalog_for_storage(storage: StorageAdapter) -> Vec<&'static CatalogEntry
                 return false;
             }
             if entry.generated_model_only && !storage.supports_model_runtime() {
+                return false;
+            }
+            if !ttl_catalog_applies(entry.id, storage) {
                 return false;
             }
             true

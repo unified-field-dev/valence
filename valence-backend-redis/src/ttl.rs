@@ -14,7 +14,7 @@ pub fn ttl_capability() -> BackendTtlCapability {
 }
 
 /// Apply schema TTL: no Redis DDL; expiry is set per key on create via [`expire_doc_key`].
-pub async fn apply_ttl_policy(_table: &str, _seconds: u64) -> Result<()> {
+pub fn apply_ttl_policy(_table: &str, _seconds: u64) -> Result<()> {
     Ok(())
 }
 

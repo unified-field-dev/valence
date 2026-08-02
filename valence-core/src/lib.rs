@@ -192,7 +192,8 @@ pub use trait_schema::{
     TraitPolicyRules,
 };
 pub use ttl::{
-    prepare_create_content, BackendTtlCapability, SchemaTtlPolicy, EXPIRE_AT_FIELD,
+    prepare_create_content, reset_ttl_warn_state_for_tests, ttl_warn_emit_count_for_tests,
+    BackendTtlCapability, SchemaTtlPolicy, EXPIRE_AT_FIELD,
 };
 pub use valence_telemetry::{ConsoleSink, NoOpSink, TelemetrySink};
 

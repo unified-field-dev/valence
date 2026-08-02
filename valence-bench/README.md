@@ -1,6 +1,6 @@
 # valence-bench
 
-Binary CLI for synthetic Valence throughput experiments (`bm-v0`..`bm-v25`). See [PERFORMANCE_STUDY.md](PERFORMANCE_STUDY.md) and [EXPERIMENTS.md](EXPERIMENTS.md).
+Binary CLI for synthetic Valence throughput experiments (`bm-v0`..`bm-v25`). See [PERFORMANCE_STUDY.md](PERFORMANCE.md) and [EXPERIMENTS.md](PERFORMANCE.md).
 
 ## Quick start
 
@@ -22,4 +22,4 @@ cargo run -p valence-bench -- experiments
 cargo run -p valence-bench -- run --experiment bm-v0 --storage mem --telemetry off --topology embedded --ops 1000
 ```
 
-See [EXPERIMENTS.md](EXPERIMENTS.md) and [docs/E2E_BENCH_COVERAGE.md](../docs/E2E_BENCH_COVERAGE.md).
+See [EXPERIMENTS.md](PERFORMANCE.md) and [docs/E2E_BENCH_COVERAGE.md](../docs/E2E_BENCH_COVERAGE.md).

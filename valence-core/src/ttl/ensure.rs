@@ -15,6 +15,23 @@ use super::stamp::policy_for_table;
 static WARNED_TABLES: Mutex<Option<HashSet<String>>> = Mutex::new(None);
 static WARN_EMIT_COUNT: AtomicUsize = AtomicUsize::new(0);
 
+/// Reset once-per-table TTL warn state (matrix / integration harnesses only).
+#[doc(hidden)]
+pub fn reset_ttl_warn_state_for_tests() {
+    let mut guard = WARNED_TABLES
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    *guard = None;
+    WARN_EMIT_COUNT.store(0, Ordering::SeqCst);
+}
+
+/// Number of non-native TTL warnings emitted since the last reset (harness only).
+#[doc(hidden)]
+#[must_use]
+pub fn ttl_warn_emit_count_for_tests() -> usize {
+    WARN_EMIT_COUNT.load(Ordering::SeqCst)
+}
+
 fn warn_non_native_once(table: &str, engine_id: &str, capability: BackendTtlCapability) {
     let mut guard = WARNED_TABLES
         .lock()
@@ -146,12 +163,16 @@ mod tests {
     use crate::schema_api::{Schema, SchemaField, SchemaMeta, SchemaPrivacy};
     use crate::ttl::{BackendTtlCapability, SchemaTtlPolicy};
 
+    static WARN_TEST_LOCK: Mutex<()> = Mutex::new(());
+
     fn reset_warn_state() {
-        let mut guard = WARNED_TABLES
+        reset_ttl_warn_state_for_tests();
+    }
+
+    fn lock_warn_tests() -> std::sync::MutexGuard<'static, ()> {
+        WARN_TEST_LOCK
             .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        *guard = None;
-        WARN_EMIT_COUNT.store(0, Ordering::SeqCst);
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     fn policy() -> SchemaTtlPolicy {
@@ -309,6 +330,7 @@ mod tests {
 
     #[tokio::test]
     async fn ensure_deferred_does_not_apply() {
+        let _lock = lock_warn_tests();
         reset_warn_state();
         let backend = FakeBackend {
             capability: BackendTtlCapability::Deferred,
@@ -323,6 +345,7 @@ mod tests {
 
     #[tokio::test]
     async fn ensure_deferred_warns_once_ok() {
+        let _lock = lock_warn_tests();
         reset_warn_state();
         let backend = FakeBackend {
             capability: BackendTtlCapability::Deferred,
@@ -335,12 +358,13 @@ mod tests {
         ensure_ttl_for_table_on_backend("t_warn_once", &backend, &policy())
             .await
             .unwrap();
-        assert_eq!(WARN_EMIT_COUNT.load(Ordering::SeqCst), 1);
+        assert_eq!(ttl_warn_emit_count_for_tests(), 1);
         assert_eq!(*backend.apply_calls.lock().unwrap(), 0);
     }
 
     #[tokio::test]
     async fn ensure_unsupported_warns_once_ok() {
+        let _lock = lock_warn_tests();
         reset_warn_state();
         let backend = FakeBackend {
             capability: BackendTtlCapability::Unsupported,
@@ -353,7 +377,7 @@ mod tests {
         ensure_ttl_for_table_on_backend("t_unsupported_warn", &backend, &policy())
             .await
             .unwrap();
-        assert_eq!(WARN_EMIT_COUNT.load(Ordering::SeqCst), 1);
+        assert_eq!(ttl_warn_emit_count_for_tests(), 1);
         assert_eq!(*backend.apply_calls.lock().unwrap(), 0);
     }
 

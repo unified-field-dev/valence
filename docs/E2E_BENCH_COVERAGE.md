@@ -10,7 +10,7 @@ Living coverage map for Valence. Status legend:
 | `H` | Host-owned (outside this repo) |
 | `D` | Deferred by design |
 
-**Target contract:** every single-backend feature E2E row runs on all storage adapters (mem, sqlite, surreal-mem, surreal-rocksdb, indradb, postgres, mongodb, redis; acme-stub where the port applies). Full matrix + benches execute on **AWS** — see [AWS_E2E_BENCH_CAMPAIGN.md](AWS_E2E_BENCH_CAMPAIGN.md). Local `./scripts/gate.sh` stays unit/clippy only.
+**Target contract:** every single-backend feature E2E row runs on all storage adapters (mem, sqlite, surreal-mem, surreal-rocksdb, indradb, postgres, mongodb, redis; acme-stub where the port applies). Full matrix + benches execute on **AWS** — operator runbook lives in the sibling checkout `uf-live-cloud-lab/valence/docs/AWS_E2E_BENCH_CAMPAIGN.md`. Local `./scripts/gate.sh` stays unit/clippy only.
 
 ## Feature × Happy / Sad / Bench
 
@@ -98,10 +98,10 @@ Living coverage map for Valence. Status legend:
 
 | Feature | Happy | Sad | Notes |
 |---------|-------|-----|-------|
-| Table TTL (create-only) | P | P | Unit: `ttl::stamp::*`, `ttl::ensure::*`. Scenarios: `ttl-deferred-stamp`, `ttl-create-only-no-refresh`, `ttl-non-native-warn`. Redis/Mongo native EXPIRE/index via adapter integration when URL/URI set. Bench: **not required** (correctness fill). Platform sweeper: Future (DESIGN). |
+| Table TTL (create-only) | Y | Y | Catalog: `ttl-native-expire` (Redis/Mongo), `ttl-deferred-stamp` (Deferred/Unsupported linger), `ttl-create-only-no-refresh`, `ttl-non-native-warn`. Unit/integration still cover stamp/ensure. Bench: **not required**. Mongo purge timing not waited (TTL monitor). Platform sweeper: Future (DESIGN). |
 | Side effects / iters / trait mixin / encrypted | N | N | Codegen-only; schedule after query+hop program. |
 
-Registered campaign scenario IDs (CI unit/integration primary; AWS execute optional): `ttl-deferred-stamp`, `ttl-create-only-no-refresh`, `ttl-non-native-warn`.
+Registered campaign scenario IDs: `ttl-native-expire`, `ttl-deferred-stamp`, `ttl-create-only-no-refresh`, `ttl-non-native-warn` (AcmeStub skipped).
 
 ## Storage × suite
 

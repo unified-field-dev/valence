@@ -66,7 +66,10 @@ mod ensure;
 mod policy;
 mod stamp;
 
-pub use ensure::{ensure_ttl_for_all, ensure_ttl_for_table};
+pub use ensure::{
+    ensure_ttl_for_all, ensure_ttl_for_table, reset_ttl_warn_state_for_tests,
+    ttl_warn_emit_count_for_tests,
+};
 pub use policy::{BackendTtlAdapter, BackendTtlCapability, SchemaTtlPolicy};
 pub use stamp::{
     prepare_create_content, prepare_create_content_with_capability, policy_for_table,

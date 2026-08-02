@@ -4,6 +4,7 @@ mod crud;
 mod model;
 mod privacy;
 mod telemetry;
+mod ttl;
 mod wiring;
 
 use crate::bootstrap::BootstrapSession;
@@ -52,6 +53,11 @@ pub(super) async fn run_step(
         | ScenarioStep::AssertValidationRejects { .. }
         | ScenarioStep::AssertValidationAccepts { .. } => privacy::run(session, step, mode).await,
         ScenarioStep::AssertTelemetryCounter { .. } => telemetry::run(session, step, mode).await,
+        ScenarioStep::EnsureTtlForAll
+        | ScenarioStep::EnsureTtlForTable
+        | ScenarioStep::TtlNativeOrLingerContract { .. }
+        | ScenarioStep::TtlCreateOnlyNoRefresh { .. }
+        | ScenarioStep::TtlNonNativeWarnOnce => ttl::run(session, step, mode).await,
     }
 }
 
@@ -97,5 +103,10 @@ pub(super) fn step_label(step: &ScenarioStep) -> String {
         ScenarioStep::ReadCacheSmoke => "read_cache_smoke".into(),
         ScenarioStep::QueryUnionJoinSmoke => "query_union_join_smoke".into(),
         ScenarioStep::M2mRelateSmoke => "m2m_relate_smoke".into(),
+        ScenarioStep::EnsureTtlForAll => "ensure_ttl_for_all".into(),
+        ScenarioStep::EnsureTtlForTable => "ensure_ttl_for_table".into(),
+        ScenarioStep::TtlNativeOrLingerContract { .. } => "ttl_native_or_linger".into(),
+        ScenarioStep::TtlCreateOnlyNoRefresh { .. } => "ttl_create_only_no_refresh".into(),
+        ScenarioStep::TtlNonNativeWarnOnce => "ttl_non_native_warn_once".into(),
     }
 }

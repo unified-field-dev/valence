@@ -154,6 +154,25 @@ pub enum ScenarioStep {
     QueryUnionJoinSmoke,
     /// Many-to-many style relate via graph edges when supported.
     M2mRelateSmoke,
+    /// Call [`valence_core::Valence::ensure_ttl_for_all`].
+    EnsureTtlForAll,
+    /// Call [`valence_core::Valence::ensure_ttl_for_table`] for the catalog TTL probe.
+    EnsureTtlForTable,
+    /// Create a TTL probe row and assert capability-specific postconditions.
+    ///
+    /// Native Redis: row gone after short TTL. Native Mongo: stamp + TTL index.
+    /// Deferred: stamp present and row still present after wait. Unsupported: no stamp, row remains.
+    TtlNativeOrLingerContract {
+        /// Record id for this run.
+        id: String,
+    },
+    /// Create, capture expire stamp / Redis TTL, update or merge, assert create-only clock.
+    TtlCreateOnlyNoRefresh {
+        /// Record id for this run.
+        id: String,
+    },
+    /// Reset warn state, ensure table, assert non-native warn emitted (Deferred/Unsupported).
+    TtlNonNativeWarnOnce,
 }
 
 /// Declarative scenario specification (JSON-serializable).
@@ -513,6 +532,49 @@ impl ScenarioSpec {
         Self {
             id: "m2m-relate-smoke".into(),
             steps: vec![ScenarioStep::BuildValence, ScenarioStep::M2mRelateSmoke],
+        }
+    }
+
+    pub fn ttl_native_expire(id: impl Into<String>) -> Self {
+        Self {
+            id: "ttl-native-expire".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::EnsureTtlForAll,
+                ScenarioStep::TtlNativeOrLingerContract { id: id.into() },
+            ],
+        }
+    }
+
+    pub fn ttl_deferred_stamp(id: impl Into<String>) -> Self {
+        Self {
+            id: "ttl-deferred-stamp".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::EnsureTtlForTable,
+                ScenarioStep::TtlNativeOrLingerContract { id: id.into() },
+            ],
+        }
+    }
+
+    pub fn ttl_create_only_no_refresh(id: impl Into<String>) -> Self {
+        Self {
+            id: "ttl-create-only-no-refresh".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::EnsureTtlForTable,
+                ScenarioStep::TtlCreateOnlyNoRefresh { id: id.into() },
+            ],
+        }
+    }
+
+    pub fn ttl_non_native_warn() -> Self {
+        Self {
+            id: "ttl-non-native-warn".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::TtlNonNativeWarnOnce,
+            ],
         }
     }
 }

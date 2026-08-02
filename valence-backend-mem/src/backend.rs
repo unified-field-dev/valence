@@ -187,11 +187,11 @@ impl DatabaseBackend for InMemoryBackend {
                     rows =
                         crate::query_filter::apply_order_limit_offset(rows, &compiled.query_string);
                     if upper.contains("SELECT VALUE") || upper.contains("SELECT id") {
+                        // Emit bare id cells (string or RecordId object) — not
+                        // `{"id": …}` wrappers — so `extract_id_from_select_value` works.
                         return Ok(rows
                             .into_iter()
-                            .filter_map(|r| {
-                                r.get("id").cloned().map(|id| serde_json::json!({"id": id}))
-                            })
+                            .filter_map(|r| r.get("id").cloned())
                             .collect());
                     }
                     return Ok(rows);
@@ -325,6 +325,11 @@ impl DatabaseBackend for InMemoryBackend {
                     .collect()
             })
             .unwrap_or_default())
+    }
+
+    /// No DDL on mem — uniqueness is enforced by the `SELECT VALUE id` probe in codegen.
+    async fn define_unique_index(&self, _table: &str, _field: &str) -> Result<()> {
+        Ok(())
     }
 
     fn ttl_capability(&self) -> valence_core::ttl::BackendTtlCapability {

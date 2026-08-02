@@ -465,7 +465,7 @@ impl DatabaseBackend for RedisBackend {
     }
 
     async fn apply_ttl_policy(&self, table: &str, policy: &SchemaTtlPolicy) -> Result<()> {
-        crate::ttl::apply_ttl_policy(table, policy.seconds).await
+        crate::ttl::apply_ttl_policy(table, policy.seconds)
     }
 }
 

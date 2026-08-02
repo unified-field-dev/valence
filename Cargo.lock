@@ -5994,9 +5994,11 @@ version = "0.1.2"
 dependencies = [
  "acme-valence-backend-stub",
  "cross-backend-model-host",
+ "futures",
  "hop-chain-model-host",
  "hop-pair-model-host",
  "minimal-schema",
+ "mongodb",
  "product-model-host",
  "serde",
  "serde_json",
