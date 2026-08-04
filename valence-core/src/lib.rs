@@ -125,8 +125,13 @@ pub use connection::{
 pub use currency::{Currency, CurrencyCode, CurrencyError, ParseCurrencyCodeError};
 pub use database_retry::retry_on_database_tx_conflict;
 pub use deletion::{
-    dispatch, is_deletion_dispatcher_registered, register_deletion_dispatcher,
+    apply_deletion_node, check_dag_delete_privacy, check_dag_delete_privacy_with_registry, dispatch,
+    is_deletion_dispatcher_registered, register_deletion_dispatcher,
     register_noop_deletion_dispatcher_for_tests, DeletionRequest, DeletionService,
+};
+#[doc(hidden)]
+pub use deletion::{
+    dispatch_queued_delete_side_effects, DeleteSideEffectDescriptor, DeleteSideEffectDispatchFn,
 };
 pub use entity::ValenceEntity;
 pub use error::{Error, Result};

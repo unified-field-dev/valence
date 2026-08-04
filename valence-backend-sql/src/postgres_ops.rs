@@ -265,6 +265,27 @@ pub async fn get_edge_targets_postgres(
         .collect())
 }
 
+pub async fn get_edge_sources_postgres(
+    pool: &PgPool,
+    to: &RecordId,
+    edge_table: &str,
+) -> Result<Vec<RecordId>> {
+    let rows = sqlx::query(
+        "SELECT from_table, from_id FROM valence_edges \
+         WHERE to_table = $1 AND to_id = $2 AND edge_type = $3",
+    )
+    .bind(to.table())
+    .bind(to.id())
+    .bind(edge_table)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::database(e.to_string()))?;
+    Ok(rows
+        .iter()
+        .map(|r| RecordId::new(r.get::<String, _>(0), r.get::<String, _>(1)))
+        .collect())
+}
+
 pub async fn define_unique_index_postgres(pool: &PgPool, table: &str, field: &str) -> Result<()> {
     assert_safe_table(table)?;
     valence_core::safe_ident::assert_safe_ident(field)?;

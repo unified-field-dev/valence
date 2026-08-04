@@ -301,6 +301,27 @@ pub async fn get_edge_targets_sqlite(
         .collect())
 }
 
+pub async fn get_edge_sources_sqlite(
+    pool: &sqlx::SqlitePool,
+    to: &RecordId,
+    edge_table: &str,
+) -> Result<Vec<RecordId>> {
+    let rows = sqlx::query(
+        "SELECT from_table, from_id FROM valence_edges \
+         WHERE to_table = ? AND to_id = ? AND edge_type = ?",
+    )
+    .bind(to.table())
+    .bind(to.id())
+    .bind(edge_table)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::database(e.to_string()))?;
+    Ok(rows
+        .iter()
+        .map(|r| RecordId::new(r.get::<String, _>(0), r.get::<String, _>(1)))
+        .collect())
+}
+
 pub async fn define_unique_index_sqlite(
     pool: &sqlx::SqlitePool,
     table: &str,

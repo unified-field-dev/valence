@@ -333,6 +333,28 @@ impl DatabaseBackend for SurrealEmbeddedBackend {
         Ok(outs.into_iter().map(valence_from_surreal).collect())
     }
 
+    async fn get_edge_sources(&self, to: &RecordId, edge_table: &str) -> Result<Vec<RecordId>> {
+        use crate::query_exec::query_err_is_missing_table;
+
+        let to_t = surreal_from_valence(to);
+        let q = format!("SELECT VALUE `in` FROM {edge_table} WHERE `out` = $to");
+        let mut response = match self.db.query(&q).bind(("to", to_t)).await {
+            Ok(r) => r,
+            Err(e) if query_err_is_missing_table(&e.to_string()) => {
+                return Ok(vec![]);
+            }
+            Err(e) => return Err(db_err(e)),
+        };
+        let ins: Vec<surrealdb::types::RecordId> = match response.take(0) {
+            Ok(r) => r,
+            Err(e) if query_err_is_missing_table(&e.to_string()) => {
+                return Ok(vec![]);
+            }
+            Err(e) => return Err(db_err(e)),
+        };
+        Ok(ins.into_iter().map(valence_from_surreal).collect())
+    }
+
     async fn ensure_schemaless_table(&self, table: &str) -> Result<()> {
         ensure_schemaless_table(&self.db, table).await
     }

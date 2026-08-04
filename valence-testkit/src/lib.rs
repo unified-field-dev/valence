@@ -40,6 +40,7 @@ mod hop_contract;
 mod hops;
 mod matrix;
 mod model_contract;
+mod on_delete;
 mod runner;
 mod scenario;
 
@@ -62,6 +63,11 @@ pub use hops::{
     directed_pairs, hop_quads_representative, hop_storage_engines, hop_triples_representative,
     run_hop_chain_contract, run_hop_pair_contract, run_hop_quad_contract, HopPair, HopQuad,
     HopTriple,
+};
+pub use on_delete::{
+    on_delete_cross_engine_secondary, run_on_delete_cascade_cross_engine,
+    run_on_delete_cascade_same_backend, run_on_delete_hop_pairs, run_on_delete_remove_edge,
+    run_on_delete_restrict_blocks, run_on_delete_set_null, run_on_delete_set_null_cross_engine,
 };
 pub use matrix::{
     all_storage_adapters, extended_store_available, extended_store_available_with_wire,

@@ -34,7 +34,6 @@ pub async fn queue_delete_entity(table: &str, id: &str, v: &Valence) -> Result<(
         return Ok(());
     };
 
-    PrivacyEvaluator::check_entity_read(schema, &existing, v).await?;
     PrivacyEvaluator::check_entity_access(schema, PrivacyOperation::Delete, &existing, v).await?;
 
     let bare = ownership::normalize_record_id_for_ownership(id);
@@ -62,6 +61,7 @@ pub async fn queue_delete_entity(table: &str, id: &str, v: &Valence) -> Result<(
             dag.restrict_violations
         )));
     }
+    crate::deletion::check_dag_delete_privacy(&dag, v).await?;
 
     ownership::OwnershipService::mark_pending_deletion(table, &bare, v).await?;
 

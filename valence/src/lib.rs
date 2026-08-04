@@ -17,6 +17,10 @@
 //! - **Host ports** — secrets, actor identity, endpoints, and telemetry injected at boot
 //! - **Privacy-aware CRUD** — policy and ownership hooks on generated [`Model`] paths; field
 //!   privacy via [`PrivacyEvaluator::filter_entity_fields`] on `Model::get` and query rows
+//! - **Queued delete** — `Model::delete` authorizes **Delete** on every **CascadeDelete** DAG node
+//!   ([`check_dag_delete_privacy`]) before queueing; Read is not required. `SetNull` / `RemoveEdge`
+//!   clear under the requester via deletion-scoped `merge_record` / `unrelate_edge`. Host workers
+//!   restore the deleting actor and run schema `side_effects` on physical CascadeDelete.
 //! - **Query privacy** — [`QueryCore::execute`] / `Model::query` post-filter rows by entity read
 //!   policy and field policies
 //! - **Default-deny policies** — schemas without entity `policies:` deny non-System actors

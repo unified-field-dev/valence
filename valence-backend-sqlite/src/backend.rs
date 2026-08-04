@@ -5,8 +5,9 @@ use std::str::FromStr;
 
 use valence_backend_sql::{
     create_record_sqlite, define_unique_index_sqlite, delete_record_sqlite, ensure_table_sqlite,
-    execute_select_sqlite, get_edge_targets_sqlite, get_record_sqlite, merge_record_sqlite,
-    relate_edge_sqlite, sql_capabilities, ttl_deferred, unrelate_edge_sqlite, update_record_sqlite,
+    execute_select_sqlite, get_edge_sources_sqlite, get_edge_targets_sqlite, get_record_sqlite,
+    merge_record_sqlite, relate_edge_sqlite, sql_capabilities, ttl_deferred, unrelate_edge_sqlite,
+    update_record_sqlite,
 };
 use valence_core::backend::DatabaseBackend;
 use valence_core::compiled_query::CompiledQuery;
@@ -188,6 +189,10 @@ impl DatabaseBackend for SqliteBackend {
 
     async fn get_edge_targets(&self, from: &RecordId, edge_table: &str) -> Result<Vec<RecordId>> {
         get_edge_targets_sqlite(&self.pool, from, edge_table).await
+    }
+
+    async fn get_edge_sources(&self, to: &RecordId, edge_table: &str) -> Result<Vec<RecordId>> {
+        get_edge_sources_sqlite(&self.pool, to, edge_table).await
     }
 
     async fn define_unique_index(&self, table: &str, field: &str) -> Result<()> {

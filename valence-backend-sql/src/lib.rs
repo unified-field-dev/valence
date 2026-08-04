@@ -20,8 +20,8 @@ pub use merge::json_merge;
 pub use postgres_ops::{
     create_record_postgres, define_unique_index_postgres, delete_record_postgres,
     ensure_edges_postgres, ensure_table_postgres, execute_select_postgres,
-    get_edge_targets_postgres, get_record_postgres, merge_record_postgres, relate_edge_postgres,
-    unrelate_edge_postgres, update_record_postgres,
+    get_edge_sources_postgres, get_edge_targets_postgres, get_record_postgres,
+    merge_record_postgres, relate_edge_postgres, unrelate_edge_postgres, update_record_postgres,
 };
 pub use query::{
     decode_select_rows, extract_ids, first_count, prepare_compiled, prepare_compiled_postgres,
@@ -29,7 +29,7 @@ pub use query::{
 };
 pub use sqlite_ops::{
     assert_safe_table, create_record_sqlite, define_unique_index_sqlite, delete_record_sqlite,
-    ensure_edges_sqlite, ensure_table_sqlite, execute_select_sqlite, get_edge_targets_sqlite,
-    get_record_sqlite, merge_record_sqlite, relate_edge_sqlite, sql_capabilities, storage_id,
-    ttl_deferred, unrelate_edge_sqlite, update_record_sqlite,
+    ensure_edges_sqlite, ensure_table_sqlite, execute_select_sqlite, get_edge_sources_sqlite,
+    get_edge_targets_sqlite, get_record_sqlite, merge_record_sqlite, relate_edge_sqlite,
+    sql_capabilities, storage_id, ttl_deferred, unrelate_edge_sqlite, update_record_sqlite,
 };

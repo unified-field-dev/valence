@@ -5,7 +5,7 @@ use sqlx::postgres::PgPool;
 use valence_backend_sql::{
     create_record_postgres, define_unique_index_postgres, delete_record_postgres,
     ensure_edges_postgres, ensure_table_postgres, execute_select_postgres,
-    get_edge_targets_postgres, get_record_postgres, merge_record_postgres, relate_edge_postgres,
+    get_edge_sources_postgres, get_edge_targets_postgres, get_record_postgres, merge_record_postgres, relate_edge_postgres,
     sql_capabilities, ttl_deferred, unrelate_edge_postgres, update_record_postgres,
 };
 use valence_core::backend::DatabaseBackend;
@@ -179,6 +179,10 @@ impl DatabaseBackend for PostgresBackend {
 
     async fn get_edge_targets(&self, from: &RecordId, edge_table: &str) -> Result<Vec<RecordId>> {
         get_edge_targets_postgres(&self.pool, from, edge_table).await
+    }
+
+    async fn get_edge_sources(&self, to: &RecordId, edge_table: &str) -> Result<Vec<RecordId>> {
+        get_edge_sources_postgres(&self.pool, to, edge_table).await
     }
 
     async fn define_unique_index(&self, table: &str, field: &str) -> Result<()> {

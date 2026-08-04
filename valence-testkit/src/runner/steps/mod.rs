@@ -2,6 +2,7 @@
 
 mod crud;
 mod model;
+mod on_delete;
 mod privacy;
 mod telemetry;
 mod ttl;
@@ -58,6 +59,12 @@ pub(super) async fn run_step(
         | ScenarioStep::TtlNativeOrLingerContract { .. }
         | ScenarioStep::TtlCreateOnlyNoRefresh { .. }
         | ScenarioStep::TtlNonNativeWarnOnce => ttl::run(session, step, mode).await,
+        ScenarioStep::OnDeleteCascadeSameBackend
+        | ScenarioStep::OnDeleteSetNull
+        | ScenarioStep::OnDeleteRemoveEdge
+        | ScenarioStep::OnDeleteRestrictBlocks
+        | ScenarioStep::OnDeleteCascadeCrossEngine
+        | ScenarioStep::OnDeleteSetNullCrossEngine => on_delete::run(session, step, mode).await,
     }
 }
 
@@ -108,5 +115,11 @@ pub(super) fn step_label(step: &ScenarioStep) -> String {
         ScenarioStep::TtlNativeOrLingerContract { .. } => "ttl_native_or_linger".into(),
         ScenarioStep::TtlCreateOnlyNoRefresh { .. } => "ttl_create_only_no_refresh".into(),
         ScenarioStep::TtlNonNativeWarnOnce => "ttl_non_native_warn_once".into(),
+        ScenarioStep::OnDeleteCascadeSameBackend => "on_delete_cascade_same_backend".into(),
+        ScenarioStep::OnDeleteSetNull => "on_delete_set_null".into(),
+        ScenarioStep::OnDeleteRemoveEdge => "on_delete_remove_edge".into(),
+        ScenarioStep::OnDeleteRestrictBlocks => "on_delete_restrict_blocks".into(),
+        ScenarioStep::OnDeleteCascadeCrossEngine => "on_delete_cascade_cross_engine".into(),
+        ScenarioStep::OnDeleteSetNullCrossEngine => "on_delete_set_null_cross_engine".into(),
     }
 }

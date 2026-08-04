@@ -301,6 +301,24 @@ pub fn embedded_catalog() -> &'static [CatalogEntry] {
             ScenarioSpec::ttl_create_only_no_refresh(ttl_record_id(storage, "create_only"))
         }),
         entry_sad("ttl-non-native-warn", |_| ScenarioSpec::ttl_non_native_warn()),
+        entry("on-delete-cascade-same-backend", PathKind::Happy, |_| {
+            ScenarioSpec::on_delete_cascade_same_backend()
+        }),
+        entry("on-delete-set-null", PathKind::Happy, |_| {
+            ScenarioSpec::on_delete_set_null()
+        }),
+        entry("on-delete-remove-edge", PathKind::Happy, |_| {
+            ScenarioSpec::on_delete_remove_edge()
+        }),
+        entry_sad("on-delete-restrict-blocks", |_| {
+            ScenarioSpec::on_delete_restrict_blocks()
+        }),
+        entry("on-delete-cascade-cross-engine", PathKind::Happy, |_| {
+            ScenarioSpec::on_delete_cascade_cross_engine()
+        }),
+        entry("on-delete-set-null-cross-engine", PathKind::Happy, |_| {
+            ScenarioSpec::on_delete_set_null_cross_engine()
+        }),
     ];
     CATALOG
 }
@@ -333,6 +351,20 @@ fn ttl_catalog_applies(entry_id: &str, storage: StorageAdapter) -> bool {
         ),
         _ => true,
     }
+}
+
+/// Whether an OnDelete catalog entry applies to this storage adapter.
+fn on_delete_catalog_applies(entry_id: &str, storage: StorageAdapter) -> bool {
+    if !entry_id.starts_with("on-delete-") {
+        return true;
+    }
+    if matches!(storage, StorageAdapter::AcmeStub) {
+        return false;
+    }
+    if entry_id.contains("cross-engine") {
+        return crate::on_delete::on_delete_cross_engine_secondary(storage).is_some();
+    }
+    true
 }
 
 /// Storage adapters participating in default PR CI matrix.
@@ -382,6 +414,9 @@ pub async fn run_catalog_entry(entry: &CatalogEntry, storage: StorageAdapter) {
     }
 
     if !ttl_catalog_applies(entry.id, storage) {
+        return;
+    }
+    if !on_delete_catalog_applies(entry.id, storage) {
         return;
     }
 
@@ -470,6 +505,9 @@ pub fn catalog_for_storage(storage: StorageAdapter) -> Vec<&'static CatalogEntry
                 return false;
             }
             if !ttl_catalog_applies(entry.id, storage) {
+                return false;
+            }
+            if !on_delete_catalog_applies(entry.id, storage) {
                 return false;
             }
             true

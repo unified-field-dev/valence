@@ -327,6 +327,26 @@ impl DatabaseBackend for InMemoryBackend {
             .unwrap_or_default())
     }
 
+    async fn get_edge_sources(&self, to: &RecordId, edge_table: &str) -> Result<Vec<RecordId>> {
+        let edges = self.edges.read().await;
+        let prefix = format!("{edge_table}:");
+        let mut sources = Vec::new();
+        let to_key = (to.table().to_string(), to.id().to_string());
+        for (key, set) in edges.iter() {
+            if !key.starts_with(&prefix) || !set.contains(&to_key) {
+                continue;
+            }
+            // key = "{edge_table}:{from_table}:{from_id}"
+            let rest = &key[prefix.len()..];
+            if let Some((ft, fid)) = rest.split_once(':') {
+                if !ft.is_empty() && !fid.is_empty() {
+                    sources.push(RecordId::new(ft, fid));
+                }
+            }
+        }
+        Ok(sources)
+    }
+
     /// No DDL on mem — uniqueness is enforced by the `SELECT VALUE id` probe in codegen.
     async fn define_unique_index(&self, _table: &str, _field: &str) -> Result<()> {
         Ok(())

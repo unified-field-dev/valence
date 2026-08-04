@@ -173,6 +173,18 @@ pub enum ScenarioStep {
     },
     /// Reset warn state, ensure table, assert non-native warn emitted (Deferred/Unsupported).
     TtlNonNativeWarnOnce,
+    /// Same-engine CascadeDelete via `DeletionDag` + `apply_deletion_node`.
+    OnDeleteCascadeSameBackend,
+    /// Same-engine SetNull FK clear.
+    OnDeleteSetNull,
+    /// Same-engine M2M RemoveEdge (skips when graph edges unsupported).
+    OnDeleteRemoveEdge,
+    /// Restrict violations; no physical apply.
+    OnDeleteRestrictBlocks,
+    /// Cross-engine CascadeDelete (primary = catalog storage; secondary from matrix helper).
+    OnDeleteCascadeCrossEngine,
+    /// Cross-engine SetNull on secondary engine.
+    OnDeleteSetNullCrossEngine,
 }
 
 /// Declarative scenario specification (JSON-serializable).
@@ -574,6 +586,60 @@ impl ScenarioSpec {
             steps: vec![
                 ScenarioStep::BuildValence,
                 ScenarioStep::TtlNonNativeWarnOnce,
+            ],
+        }
+    }
+
+    pub fn on_delete_cascade_same_backend() -> Self {
+        Self {
+            id: "on-delete-cascade-same-backend".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::OnDeleteCascadeSameBackend,
+            ],
+        }
+    }
+
+    pub fn on_delete_set_null() -> Self {
+        Self {
+            id: "on-delete-set-null".into(),
+            steps: vec![ScenarioStep::BuildValence, ScenarioStep::OnDeleteSetNull],
+        }
+    }
+
+    pub fn on_delete_remove_edge() -> Self {
+        Self {
+            id: "on-delete-remove-edge".into(),
+            steps: vec![ScenarioStep::BuildValence, ScenarioStep::OnDeleteRemoveEdge],
+        }
+    }
+
+    pub fn on_delete_restrict_blocks() -> Self {
+        Self {
+            id: "on-delete-restrict-blocks".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::OnDeleteRestrictBlocks,
+            ],
+        }
+    }
+
+    pub fn on_delete_cascade_cross_engine() -> Self {
+        Self {
+            id: "on-delete-cascade-cross-engine".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::OnDeleteCascadeCrossEngine,
+            ],
+        }
+    }
+
+    pub fn on_delete_set_null_cross_engine() -> Self {
+        Self {
+            id: "on-delete-set-null-cross-engine".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::OnDeleteSetNullCrossEngine,
             ],
         }
     }

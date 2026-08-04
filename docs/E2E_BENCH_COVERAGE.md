@@ -64,7 +64,9 @@ Living coverage map for Valence. Status legend:
 | Same-backend HasOne/HasMany | P | N | bm-v15→v24 |
 | Cross-backend depth-2 | Y (Cartesian generator) | Y (missing mid-hop) | **bm-v24** |
 | Depth 3–4 nested where | Y (chain host) | Y | **bm-v25** |
-| OnDelete Restrict | N | N | N |
+| OnDelete Restrict | Y (`on-delete-restrict-blocks`) | Y | N |
+| OnDelete Cascade / SetNull / RemoveEdge | Y (`on-delete-cascade-same-backend`, `on-delete-set-null`, `on-delete-remove-edge`) | Y (Restrict) | N |
+| OnDelete cross-engine | Y (`on-delete-cascade-cross-engine`, `on-delete-set-null-cross-engine`; hop pairs soft-skip without wire) | N | N |
 
 ### Privacy / ownership / validation
 
@@ -92,16 +94,21 @@ Living coverage map for Valence. Status legend:
 | Recording/console telemetry | Y | N | bm-v2/18 |
 | Admin registry/read/delete | Y (all storages via contract) | P | N |
 | DeletionService queue | Y | N | bm-v9 |
-| DAG plan vs live graph | N | N | N |
+| Pre-queue DAG Delete privacy (CascadeDelete-only) | Y (`dag_privacy` integ + SetNull filter) | Y (child Deny) | N |
+| Deletion requester actor restore | Y (platform `requester_actor`) | Y (missing `requested_by`) | N |
+| DAG plan vs live graph | Y (platform + catalog OnDelete) | Y (Restrict) | N |
 
 ### Schema extras
 
 | Feature | Happy | Sad | Notes |
 |---------|-------|-----|-------|
 | Table TTL (create-only) | Y | Y | Catalog: `ttl-native-expire` (Redis/Mongo), `ttl-deferred-stamp` (Deferred/Unsupported linger), `ttl-create-only-no-refresh`, `ttl-non-native-warn`. Unit/integration still cover stamp/ensure. Bench: **not required**. Mongo purge timing not waited (TTL monitor). Platform sweeper: Future (DESIGN). |
-| Side effects / iters / trait mixin / encrypted | N | N | Codegen-only; schedule after query+hop program. |
+| Side effects on queued/cascade physical delete | Y (platform TM-V3 cascade-child SE) | Y (Restrict → SE=0) | Platform integ; L0 catalog uses `apply_deletion_node` without Chronon SE |
+| Iters / trait mixin / encrypted | N | N | Schedule after query+hop program. |
 
-Registered campaign scenario IDs: `ttl-native-expire`, `ttl-deferred-stamp`, `ttl-create-only-no-refresh`, `ttl-non-native-warn` (AcmeStub skipped).
+Registered campaign scenario IDs: `ttl-native-expire`, `ttl-deferred-stamp`, `ttl-create-only-no-refresh`, `ttl-non-native-warn`,
+`on-delete-cascade-same-backend`, `on-delete-set-null`, `on-delete-remove-edge`, `on-delete-restrict-blocks`,
+`on-delete-cascade-cross-engine`, `on-delete-set-null-cross-engine` (AcmeStub skipped for OnDelete / TTL).
 
 ## Storage × suite
 
