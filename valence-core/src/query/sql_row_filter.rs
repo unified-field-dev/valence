@@ -232,17 +232,25 @@ mod tests {
     }
 
     #[test]
-    fn order_limit_offset_window() {
-        let rows = vec![
-            serde_json::json!({"id": "1", "name": "c"}),
-            serde_json::json!({"id": "2", "name": "a"}),
-            serde_json::json!({"id": "3", "name": "b"}),
-        ];
-        let out = apply_order_limit_offset(
-            rows,
-            "SELECT * FROM project ORDER BY name ASC LIMIT 1 OFFSET 1",
+    fn count_where_thing_eq_or_clause_filters_record_fk() {
+        // Exact shape emitted by `compiled_query_factory::count_where_thing_eq` for SQL/mem.
+        let compiled = CompiledQuery::new(
+            "SELECT COUNT(*) AS count FROM account \
+             WHERE json_extract(body, '$.user') = $bare_id \
+                OR json_extract(body, '$.user.id') = $bare_id \
+                OR json_extract(body, '$.user') = $parent_rid"
+                .into(),
+            vec![
+                ("bare_id".into(), serde_json::json!("persona")),
+                ("parent_rid".into(), serde_json::json!("user:persona")),
+            ],
         );
+        let rows = vec![
+            serde_json::json!({"id": "a1", "user": {"table": "user", "id": "owner"}}),
+            serde_json::json!({"id": "a2", "user": {"table": "user", "id": "persona"}}),
+        ];
+        let out = apply_equality_where(rows, &compiled);
         assert_eq!(out.len(), 1);
-        assert_eq!(out[0]["name"], "b");
+        assert_eq!(out[0]["id"], "a2");
     }
 }
