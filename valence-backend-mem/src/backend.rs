@@ -109,12 +109,15 @@ impl DatabaseBackend for InMemoryBackend {
                         .unwrap_or("")
                         .trim();
                     if !table.is_empty() {
-                        let count = {
+                        let mut rows = {
                             let tables = self.table_records_read(table).await;
                             tables
                                 .get(table)
-                                .map_or(0, |m| i64::try_from(m.len()).unwrap_or(i64::MAX))
+                                .map(|m| m.values().cloned().collect::<Vec<_>>())
+                                .unwrap_or_default()
                         };
+                        rows = crate::query_filter::apply_equality_where(rows, compiled);
+                        let count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
                         return Ok(vec![serde_json::json!(count)]);
                     }
                 }

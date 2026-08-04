@@ -94,15 +94,23 @@ async fn run_count_query(
         Err(e) if query_err_is_missing_table(&e.to_string()) => return Ok(0),
         Err(e) => return Err(Error::database(e.to_string())),
     };
-    Ok(rows
-        .into_iter()
-        .next()
-        .and_then(|v| {
-            v.as_i64()
-                .or_else(|| v.get("count").and_then(|c| c.as_i64()))
-                .or_else(|| v.as_f64().map(|f| f as i64))
-        })
-        .unwrap_or(0))
+    if rows.is_empty() {
+        return Ok(0);
+    }
+    // Prefer an explicit aggregate cell (`COUNT(*) AS count` or bare integer).
+    if let Some(n) = rows.first().and_then(|v| {
+        v.as_i64()
+            .or_else(|| v.get("count").and_then(|c| c.as_i64()))
+            .or_else(|| v.as_f64().map(|f| f as i64))
+    }) {
+        // Document engines often return filtered row objects for COUNT SQL instead of
+        // an aggregate — only trust a single scalar/count row.
+        if rows.len() == 1 {
+            return Ok(n);
+        }
+    }
+    // Filtered document rows (Mongo/Redis/Indra apply WHERE in-process).
+    Ok(i64::try_from(rows.len()).unwrap_or(i64::MAX))
 }
 
 async fn run_id_query(

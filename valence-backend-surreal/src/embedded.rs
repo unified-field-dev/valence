@@ -192,8 +192,17 @@ impl DatabaseBackend for SurrealEmbeddedBackend {
         valence_core::ttl::prepare_create_content(table, self, &mut content)?;
         let explicit_id = content
             .get("id")
-            .and_then(|v| v.as_str())
-            .map(|s| thing_to_id_only(s.to_string()))
+            .and_then(|v| {
+                v.as_str()
+                    .map(str::to_string)
+                    .or_else(|| {
+                        v.as_object()
+                            .and_then(|o| o.get("id"))
+                            .and_then(|x| x.as_str())
+                            .map(str::to_string)
+                    })
+            })
+            .map(thing_to_id_only)
             .filter(|s| !s.is_empty());
         let json_content = strip_id_from_content(content);
         let resource = match explicit_id.as_deref() {

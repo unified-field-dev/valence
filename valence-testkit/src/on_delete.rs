@@ -253,7 +253,7 @@ pub async fn run_on_delete_cascade_same_backend(valence: &Valence) -> Result<(),
     backend
         .create_record(
             "od_cascade_parent",
-            json!({"id": {"table":"od_cascade_parent","id": pid}, "name": "p"}),
+            json!({"id": pid, "name": "p"}),
         )
         .await
         .map_err(|e| e.to_string())?;
@@ -261,7 +261,7 @@ pub async fn run_on_delete_cascade_same_backend(valence: &Valence) -> Result<(),
         .create_record(
             "od_cascade_child",
             json!({
-                "id": {"table":"od_cascade_child","id": cid},
+                "id": cid,
                 "parent_id": format!("od_cascade_parent:{pid}")
             }),
         )
@@ -304,7 +304,7 @@ pub async fn run_on_delete_set_null(valence: &Valence) -> Result<(), String> {
     backend
         .create_record(
             "od_setnull_parent",
-            json!({"id": {"table":"od_setnull_parent","id": pid}, "name": "p"}),
+            json!({"id": pid, "name": "p"}),
         )
         .await
         .map_err(|e| e.to_string())?;
@@ -312,7 +312,7 @@ pub async fn run_on_delete_set_null(valence: &Valence) -> Result<(), String> {
         .create_record(
             "od_setnull_child",
             json!({
-                "id": {"table":"od_setnull_child","id": cid},
+                "id": cid,
                 "parent_id": format!("od_setnull_parent:{pid}"),
                 "name": "keep"
             }),
@@ -356,14 +356,14 @@ pub async fn run_on_delete_remove_edge(valence: &Valence) -> Result<(), String> 
     backend
         .create_record(
             "od_edge_parent",
-            json!({"id": {"table":"od_edge_parent","id": pid}}),
+            json!({"id": pid}),
         )
         .await
         .map_err(|e| e.to_string())?;
     backend
         .create_record(
             "od_edge_peer",
-            json!({"id": {"table":"od_edge_peer","id": tid}}),
+            json!({"id": tid}),
         )
         .await
         .map_err(|e| e.to_string())?;
@@ -414,7 +414,7 @@ pub async fn run_on_delete_restrict_blocks(valence: &Valence) -> Result<(), Stri
     backend
         .create_record(
             "od_restrict_parent",
-            json!({"id": {"table":"od_restrict_parent","id": pid}}),
+            json!({"id": pid}),
         )
         .await
         .map_err(|e| e.to_string())?;
@@ -422,7 +422,7 @@ pub async fn run_on_delete_restrict_blocks(valence: &Valence) -> Result<(), Stri
         .create_record(
             "od_restrict_child",
             json!({
-                "id": {"table":"od_restrict_child","id": cid},
+                "id": cid,
                 "parent_id": format!("od_restrict_parent:{pid}")
             }),
         )
@@ -553,7 +553,7 @@ pub async fn run_on_delete_cascade_cross_engine(
     parent_be
         .create_record(
             "od_xe_ca_parent",
-            json!({"id": {"table":"od_xe_ca_parent","id": pid}}),
+            json!({"id": pid}),
         )
         .await
         .map_err(|e| e.to_string())?;
@@ -561,7 +561,7 @@ pub async fn run_on_delete_cascade_cross_engine(
         .create_record(
             "od_xe_ca_child",
             json!({
-                "id": {"table":"od_xe_ca_child","id": cid},
+                "id": cid,
                 "parent_id": format!("od_xe_ca_parent:{pid}")
             }),
         )
@@ -626,7 +626,7 @@ pub async fn run_on_delete_set_null_cross_engine(
     parent_be
         .create_record(
             "od_xe_sn_parent",
-            json!({"id": {"table":"od_xe_sn_parent","id": pid}}),
+            json!({"id": pid}),
         )
         .await
         .map_err(|e| e.to_string())?;
@@ -634,7 +634,7 @@ pub async fn run_on_delete_set_null_cross_engine(
         .create_record(
             "od_xe_sn_child",
             json!({
-                "id": {"table":"od_xe_sn_child","id": cid},
+                "id": cid,
                 "parent_id": format!("od_xe_sn_parent:{pid}")
             }),
         )
