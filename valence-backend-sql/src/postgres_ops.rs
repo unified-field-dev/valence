@@ -298,3 +298,22 @@ pub async fn define_unique_index_postgres(pool: &PgPool, table: &str, field: &st
         .map_err(|e| Error::database(e.to_string()))?;
     Ok(())
 }
+
+/// Idempotent non-unique index on `__valence_expire_at` for platform TTL sweep discovery.
+pub async fn apply_ttl_policy_postgres(
+    pool: &PgPool,
+    table: &str,
+    _policy: &valence_core::ttl::SchemaTtlPolicy,
+) -> Result<()> {
+    assert_safe_table(table)?;
+    let field = valence_core::ttl::EXPIRE_AT_FIELD;
+    valence_core::safe_ident::assert_safe_ident(field)?;
+    ensure_table_postgres(pool, table).await?;
+    let idx = format!("valence_ttl_expire_at_{table}");
+    let q = format!("CREATE INDEX IF NOT EXISTS {idx} ON {table} ((body->>'{field}'))");
+    sqlx::query(&q)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::database(e.to_string()))?;
+    Ok(())
+}

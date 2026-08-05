@@ -4,10 +4,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use std::str::FromStr;
 
 use valence_backend_sql::{
-    create_record_sqlite, define_unique_index_sqlite, delete_record_sqlite, ensure_table_sqlite,
-    execute_select_sqlite, get_edge_sources_sqlite, get_edge_targets_sqlite, get_record_sqlite,
-    merge_record_sqlite, relate_edge_sqlite, sql_capabilities, ttl_deferred, unrelate_edge_sqlite,
-    update_record_sqlite,
+    apply_ttl_policy_sqlite, create_record_sqlite, define_unique_index_sqlite,
+    delete_record_sqlite, ensure_table_sqlite, execute_select_sqlite, get_edge_sources_sqlite,
+    get_edge_targets_sqlite, get_record_sqlite, merge_record_sqlite, relate_edge_sqlite,
+    sql_capabilities, ttl_deferred, unrelate_edge_sqlite, update_record_sqlite,
 };
 use valence_core::backend::DatabaseBackend;
 use valence_core::compiled_query::CompiledQuery;
@@ -203,7 +203,7 @@ impl DatabaseBackend for SqliteBackend {
         ttl_deferred()
     }
 
-    async fn apply_ttl_policy(&self, _table: &str, _policy: &SchemaTtlPolicy) -> Result<()> {
-        Ok(())
+    async fn apply_ttl_policy(&self, table: &str, policy: &SchemaTtlPolicy) -> Result<()> {
+        apply_ttl_policy_sqlite(&self.pool, table, policy).await
     }
 }

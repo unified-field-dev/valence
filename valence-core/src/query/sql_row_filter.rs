@@ -29,6 +29,18 @@ pub fn apply_equality_where(
     }
 
     for (key, value) in &compiled.params {
+        let lt_needle = format!("< ${key}");
+        if let Some(lt_at) = clause.find(&lt_needle) {
+            let before = clause[..lt_at].trim_end();
+            let field = extract_field_ref(before);
+            if !field.is_empty() {
+                if let Some(threshold) = value.as_str() {
+                    rows.retain(|row| row_string_field(row, field).is_some_and(|s| s < threshold));
+                }
+            }
+            continue;
+        }
+
         let needle = format!("= ${key}");
         if let Some(eq_at) = clause.find(&needle) {
             let before = clause[..eq_at].trim_end();

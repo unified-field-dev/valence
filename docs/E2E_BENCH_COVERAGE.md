@@ -102,7 +102,7 @@ Living coverage map for Valence. Status legend:
 
 | Feature | Happy | Sad | Notes |
 |---------|-------|-----|-------|
-| Table TTL (create-only) | Y | Y | Catalog: `ttl-native-expire` (Redis/Mongo), `ttl-deferred-stamp` (Deferred/Unsupported linger), `ttl-create-only-no-refresh`, `ttl-non-native-warn`. Unit/integration still cover stamp/ensure. Bench: **not required**. Mongo purge timing not waited (TTL monitor). Platform sweeper: Future (DESIGN). |
+| Table TTL (create-only) | Y | Y | Catalog: `ttl-native-expire` (Redis/Mongo), `ttl-deferred-stamp` (Deferred/Unsupported linger without Chronon), `ttl-create-only-no-refresh`, `ttl-non-native-warn`. Platform sweeper delete-after-sweep: `valence-platform` `ttl_sweep_*` integ (`ttl-deferred-sweep-delete`). Bench: **not required**. Mongo purge timing not waited (TTL monitor). |
 | Side effects on queued/cascade physical delete | Y (platform TM-V3 cascade-child SE) | Y (Restrict → SE=0) | Platform integ; L0 catalog uses `apply_deletion_node` without Chronon SE |
 | Iters / trait mixin / encrypted | N | N | Schedule after query+hop program. |
 

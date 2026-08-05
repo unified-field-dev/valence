@@ -200,7 +200,8 @@
 //! Add `ttl: { seconds: N }` on a table schema (create-only clock). After backends are
 //! registered, call [`Valence::ensure_ttl_for_all`] once — it scrapes the schema registry
 //! for every TTL table (no hand list). See the [`ttl`] module for capabilities, the reserved
-//! [`ttl::EXPIRE_AT_FIELD`], and Deferred/non-native warnings.
+//! [`ttl::EXPIRE_AT_FIELD`], and Deferred/non-native warnings. Hosts wire
+//! `valence_platform::ttl_sweep::register_ttl_service` so Deferred engines delete expired rows.
 //!
 //! ## 3. Set up build-time codegen
 //!
@@ -406,9 +407,9 @@ extern crate self as valence;
 
 mod include_generated;
 
-pub use valence_core::*;
 /// Table-level TTL policy, stamp helpers, and ensure entry points.
 pub use valence_core::ttl;
+pub use valence_core::*;
 pub use valence_macros::*;
 
 #[cfg(feature = "telemetry-console")]

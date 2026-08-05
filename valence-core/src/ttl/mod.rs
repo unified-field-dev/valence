@@ -9,7 +9,8 @@
 //!
 //! # Does not own
 //!
-//! Periodic deletion of Deferred rows (Valence platform Chronon sweeper — Future).
+//! Periodic deletion of Deferred rows (`valence_platform::ttl_sweep` Chronon sweeper —
+//! host must call `register_ttl_service`).
 //! Sliding TTL, field-level TTL, and Spectra TTL metrics.
 //!
 //! # Concern → API
@@ -67,11 +68,11 @@ mod policy;
 mod stamp;
 
 pub use ensure::{
-    ensure_ttl_for_all, ensure_ttl_for_table, reset_ttl_warn_state_for_tests,
+    ensure_ttl_for_all, ensure_ttl_for_table, list_ttl_table_names, reset_ttl_warn_state_for_tests,
     ttl_warn_emit_count_for_tests,
 };
 pub use policy::{BackendTtlAdapter, BackendTtlCapability, SchemaTtlPolicy};
 pub use stamp::{
-    prepare_create_content, prepare_create_content_with_capability, policy_for_table,
+    policy_for_table, prepare_create_content, prepare_create_content_with_capability,
     stamp_expire_at_if_absent, EXPIRE_AT_FIELD,
 };

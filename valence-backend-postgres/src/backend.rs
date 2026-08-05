@@ -3,10 +3,11 @@
 use sqlx::postgres::PgPool;
 
 use valence_backend_sql::{
-    create_record_postgres, define_unique_index_postgres, delete_record_postgres,
-    ensure_edges_postgres, ensure_table_postgres, execute_select_postgres,
-    get_edge_sources_postgres, get_edge_targets_postgres, get_record_postgres, merge_record_postgres, relate_edge_postgres,
-    sql_capabilities, ttl_deferred, unrelate_edge_postgres, update_record_postgres,
+    apply_ttl_policy_postgres, create_record_postgres, define_unique_index_postgres,
+    delete_record_postgres, ensure_edges_postgres, ensure_table_postgres, execute_select_postgres,
+    get_edge_sources_postgres, get_edge_targets_postgres, get_record_postgres,
+    merge_record_postgres, relate_edge_postgres, sql_capabilities, ttl_deferred,
+    unrelate_edge_postgres, update_record_postgres,
 };
 use valence_core::backend::DatabaseBackend;
 use valence_core::compiled_query::CompiledQuery;
@@ -193,7 +194,7 @@ impl DatabaseBackend for PostgresBackend {
         ttl_deferred()
     }
 
-    async fn apply_ttl_policy(&self, _table: &str, _policy: &SchemaTtlPolicy) -> Result<()> {
-        Ok(())
+    async fn apply_ttl_policy(&self, table: &str, policy: &SchemaTtlPolicy) -> Result<()> {
+        apply_ttl_policy_postgres(&self.pool, table, policy).await
     }
 }

@@ -51,7 +51,7 @@ fn warn_non_native_once(table: &str, engine_id: &str, capability: BackendTtlCapa
         table,
         engine_id,
         capability = capability_label,
-        "schema TTL is not natively supported on this backend; wire the Valence platform TTL service (Future) for Deferred engines"
+        "schema TTL is not natively supported on this backend; wire valence_platform::ttl_sweep (register_ttl_service) for Deferred engines"
     );
     #[cfg(feature = "instrumentation")]
     crate::instrumentation::ttl::record_non_native_warn(capability_label, engine_id);
@@ -59,7 +59,7 @@ fn warn_non_native_once(table: &str, engine_id: &str, capability: BackendTtlCapa
 
 /// Tables in `registry` whose schema declares `ttl:`.
 #[must_use]
-pub(crate) fn list_ttl_table_names(registry: &SchemaRegistry) -> Vec<String> {
+pub fn list_ttl_table_names(registry: &SchemaRegistry) -> Vec<String> {
     registry
         .list_schemas()
         .into_iter()
@@ -148,7 +148,13 @@ pub(crate) async fn ensure_ttl_for_table_on_backend(
             );
             Ok(())
         }
-        BackendTtlCapability::Deferred | BackendTtlCapability::Unsupported => {
+        BackendTtlCapability::Deferred => {
+            // Expire-at index for platform sweeper discovery (idempotent).
+            backend.apply_ttl_policy(table, policy).await?;
+            warn_non_native_once(table, engine_id, capability);
+            Ok(())
+        }
+        BackendTtlCapability::Unsupported => {
             warn_non_native_once(table, engine_id, capability);
             Ok(())
         }
@@ -329,7 +335,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ensure_deferred_does_not_apply() {
+    async fn ensure_deferred_applies_index_policy() {
         let _lock = lock_warn_tests();
         reset_warn_state();
         let backend = FakeBackend {
@@ -340,7 +346,7 @@ mod tests {
         ensure_ttl_for_table_on_backend("t_deferred_warn", &backend, &policy())
             .await
             .unwrap();
-        assert_eq!(*backend.apply_calls.lock().unwrap(), 0);
+        assert_eq!(*backend.apply_calls.lock().unwrap(), 1);
     }
 
     #[tokio::test]
@@ -359,7 +365,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(ttl_warn_emit_count_for_tests(), 1);
-        assert_eq!(*backend.apply_calls.lock().unwrap(), 0);
+        assert_eq!(*backend.apply_calls.lock().unwrap(), 2);
     }
 
     #[tokio::test]
@@ -412,6 +418,9 @@ mod tests {
             leak_schema("with_ttl_b", Some(policy())),
         ))));
         let names = list_ttl_table_names(&registry);
-        assert_eq!(names, vec!["with_ttl_a".to_string(), "with_ttl_b".to_string()]);
+        assert_eq!(
+            names,
+            vec!["with_ttl_a".to_string(), "with_ttl_b".to_string()]
+        );
     }
 }

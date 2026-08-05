@@ -104,7 +104,7 @@ pub use actor::Actor;
 pub use actor_policy::{
     is_system_shaped_actor, ActorJsonPolicy, ActorTrust, RejectExternalSystemActor,
 };
-pub use admin_entity_delete::queue_delete_entity;
+pub use admin_entity_delete::{queue_delete_entity, queue_delete_entity_returning_run_id};
 #[cfg(feature = "compiler-indradb")]
 pub use backend::IndraQueryCompiler;
 #[cfg(feature = "compiler-mongodb")]
@@ -125,8 +125,8 @@ pub use connection::{
 pub use currency::{Currency, CurrencyCode, CurrencyError, ParseCurrencyCodeError};
 pub use database_retry::retry_on_database_tx_conflict;
 pub use deletion::{
-    apply_deletion_node, check_dag_delete_privacy, check_dag_delete_privacy_with_registry, dispatch,
-    is_deletion_dispatcher_registered, register_deletion_dispatcher,
+    apply_deletion_node, check_dag_delete_privacy, check_dag_delete_privacy_with_registry,
+    dispatch, is_deletion_dispatcher_registered, register_deletion_dispatcher,
     register_noop_deletion_dispatcher_for_tests, DeletionRequest, DeletionService,
 };
 #[doc(hidden)]
@@ -197,8 +197,8 @@ pub use trait_schema::{
     TraitPolicyRules,
 };
 pub use ttl::{
-    prepare_create_content, reset_ttl_warn_state_for_tests, ttl_warn_emit_count_for_tests,
-    BackendTtlCapability, SchemaTtlPolicy, EXPIRE_AT_FIELD,
+    list_ttl_table_names, prepare_create_content, reset_ttl_warn_state_for_tests,
+    ttl_warn_emit_count_for_tests, BackendTtlCapability, SchemaTtlPolicy, EXPIRE_AT_FIELD,
 };
 pub use valence_telemetry::{ConsoleSink, NoOpSink, TelemetrySink};
 

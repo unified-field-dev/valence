@@ -347,11 +347,23 @@ pub fn ttl_deferred() -> valence_core::ttl::BackendTtlCapability {
     valence_core::ttl::BackendTtlCapability::Deferred
 }
 
-#[allow(dead_code, clippy::unused_async)]
-pub async fn apply_ttl_noop(
-    _table: &str,
+/// Idempotent non-unique index on `__valence_expire_at` for platform TTL sweep discovery.
+pub async fn apply_ttl_policy_sqlite(
+    pool: &sqlx::SqlitePool,
+    table: &str,
     _policy: &valence_core::ttl::SchemaTtlPolicy,
 ) -> Result<()> {
+    assert_safe_table(table)?;
+    ensure_table_sqlite(pool, table).await?;
+    let field = valence_core::ttl::EXPIRE_AT_FIELD;
+    valence_core::safe_ident::assert_safe_ident(field)?;
+    let idx = format!("valence_ttl_expire_at_{table}");
+    let q =
+        format!("CREATE INDEX IF NOT EXISTS {idx} ON {table} (json_extract(body, '$.{field}'))");
+    sqlx::query(&q)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::database(e.to_string()))?;
     Ok(())
 }
 
