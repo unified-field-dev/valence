@@ -138,21 +138,28 @@ async fn iter_scan_complete(session: &mut BootstrapSession) -> Result<(), String
     let mut seen = Vec::new();
     let mut offset = 0usize;
     let engine = backend.engine_id();
+    let surreal = engine.contains("surreal");
     loop {
+        // Surreal uses START, not SQL OFFSET (see QueryCore surreal emit).
+        let window = if surreal {
+            format!("LIMIT {PAGE} START {offset}")
+        } else {
+            format!("LIMIT {PAGE} OFFSET {offset}")
+        };
         let q = if engine.contains("postgres")
             || engine.contains("sqlite")
             || engine.contains("hybrid")
         {
             CompiledQuery::new(
                 format!(
-                    "SELECT id FROM {CATALOG_ITER_PROBE_TABLE} ORDER BY id ASC LIMIT {PAGE} OFFSET {offset}"
+                    "SELECT id FROM {CATALOG_ITER_PROBE_TABLE} ORDER BY id ASC {window}"
                 ),
                 vec![],
             )
         } else {
             CompiledQuery::new(
                 format!(
-                    "SELECT VALUE id FROM {CATALOG_ITER_PROBE_TABLE} ORDER BY id ASC LIMIT {PAGE} OFFSET {offset}"
+                    "SELECT VALUE id FROM {CATALOG_ITER_PROBE_TABLE} ORDER BY id ASC {window}"
                 ),
                 vec![],
             )
