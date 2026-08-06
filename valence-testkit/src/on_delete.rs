@@ -27,10 +27,8 @@ use crate::matrix::{extended_store_available_with_wire, StorageAdapter};
 use crate::model_contract::backend_for_storage;
 use hop_pair_model_host::{HOP_A, HOP_B};
 
-static OD_PARENT_DB: valence_core::DatabaseFromEngine =
-    Database::from_engine("primary", HOP_A);
-static OD_CHILD_DB: valence_core::DatabaseFromEngine =
-    Database::from_engine("secondary", HOP_B);
+static OD_PARENT_DB: valence_core::DatabaseFromEngine = Database::from_engine("primary", HOP_A);
+static OD_CHILD_DB: valence_core::DatabaseFromEngine = Database::from_engine("secondary", HOP_B);
 
 fn leak_schema(schema: Schema) -> &'static Schema {
     Box::leak(Box::new(schema))
@@ -251,10 +249,7 @@ pub async fn run_on_delete_cascade_same_backend(valence: &Valence) -> Result<(),
     let pid = format!("p_{tag}");
     let cid = format!("c_{tag}");
     backend
-        .create_record(
-            "od_cascade_parent",
-            json!({"id": pid, "name": "p"}),
-        )
+        .create_record("od_cascade_parent", json!({"id": pid, "name": "p"}))
         .await
         .map_err(|e| e.to_string())?;
     backend
@@ -278,7 +273,10 @@ pub async fn run_on_delete_cascade_same_backend(valence: &Valence) -> Result<(),
     .await
     .map_err(|e| e.to_string())?;
     if !dag.restrict_violations.is_empty() {
-        return Err(format!("unexpected Restrict: {:?}", dag.restrict_violations));
+        return Err(format!(
+            "unexpected Restrict: {:?}",
+            dag.restrict_violations
+        ));
     }
     apply_ordered_dag(&dag, valence)
         .await
@@ -302,10 +300,7 @@ pub async fn run_on_delete_set_null(valence: &Valence) -> Result<(), String> {
     let pid = format!("p_{tag}");
     let cid = format!("c_{tag}");
     backend
-        .create_record(
-            "od_setnull_parent",
-            json!({"id": pid, "name": "p"}),
-        )
+        .create_record("od_setnull_parent", json!({"id": pid, "name": "p"}))
         .await
         .map_err(|e| e.to_string())?;
     backend
@@ -354,17 +349,11 @@ pub async fn run_on_delete_remove_edge(valence: &Valence) -> Result<(), String> 
     let pid = format!("p_{tag}");
     let tid = format!("t_{tag}");
     backend
-        .create_record(
-            "od_edge_parent",
-            json!({"id": pid}),
-        )
+        .create_record("od_edge_parent", json!({"id": pid}))
         .await
         .map_err(|e| e.to_string())?;
     backend
-        .create_record(
-            "od_edge_peer",
-            json!({"id": tid}),
-        )
+        .create_record("od_edge_peer", json!({"id": tid}))
         .await
         .map_err(|e| e.to_string())?;
     let from = RecordId::new("od_edge_parent", &pid);
@@ -412,10 +401,7 @@ pub async fn run_on_delete_restrict_blocks(valence: &Valence) -> Result<(), Stri
     let pid = format!("p_{tag}");
     let cid = format!("c_{tag}");
     backend
-        .create_record(
-            "od_restrict_parent",
-            json!({"id": pid}),
-        )
+        .create_record("od_restrict_parent", json!({"id": pid}))
         .await
         .map_err(|e| e.to_string())?;
     backend
@@ -551,10 +537,7 @@ pub async fn run_on_delete_cascade_cross_engine(
         .await
         .map_err(|e| e.to_string())?;
     parent_be
-        .create_record(
-            "od_xe_ca_parent",
-            json!({"id": pid}),
-        )
+        .create_record("od_xe_ca_parent", json!({"id": pid}))
         .await
         .map_err(|e| e.to_string())?;
     child_be
@@ -575,7 +558,10 @@ pub async fn run_on_delete_cascade_cross_engine(
         .await
         .map_err(|e| e.to_string())?;
     if !dag.restrict_violations.is_empty() {
-        return Err(format!("unexpected Restrict: {:?}", dag.restrict_violations));
+        return Err(format!(
+            "unexpected Restrict: {:?}",
+            dag.restrict_violations
+        ));
     }
     apply_ordered_dag(&dag, &valence)
         .await
@@ -624,10 +610,7 @@ pub async fn run_on_delete_set_null_cross_engine(
         .await
         .map_err(|e| e.to_string())?;
     parent_be
-        .create_record(
-            "od_xe_sn_parent",
-            json!({"id": pid}),
-        )
+        .create_record("od_xe_sn_parent", json!({"id": pid}))
         .await
         .map_err(|e| e.to_string())?;
     child_be
@@ -756,10 +739,10 @@ pub async fn run_on_delete_hop_pairs(
     for pair in pairs {
         run_on_delete_cascade_cross_engine(pair, wire)
             .await
-            .map_err(|e| valence_core::error::Error::Internal(e))?;
+            .map_err(valence_core::error::Error::Internal)?;
         run_on_delete_set_null_cross_engine(pair, wire)
             .await
-            .map_err(|e| valence_core::error::Error::Internal(e))?;
+            .map_err(valence_core::error::Error::Internal)?;
     }
     Ok(())
 }

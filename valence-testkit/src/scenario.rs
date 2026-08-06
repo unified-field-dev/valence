@@ -173,6 +173,13 @@ pub enum ScenarioStep {
     },
     /// Reset warn state, ensure table, assert non-native warn emitted (Deferred/Unsupported).
     TtlNonNativeWarnOnce,
+    /// Deferred adapter: stamp + backdate expire, delete, assert row gone (sweep-delete completeness).
+    TtlDeferredSweepDelete {
+        /// Record id for this run.
+        id: String,
+    },
+    /// Multi-page scan completeness (>1000 rows) for iter-capable adapters.
+    IterScanComplete,
     /// Same-engine CascadeDelete via `DeletionDag` + `apply_deletion_node`.
     OnDeleteCascadeSameBackend,
     /// Same-engine SetNull FK clear.
@@ -587,6 +594,24 @@ impl ScenarioSpec {
                 ScenarioStep::BuildValence,
                 ScenarioStep::TtlNonNativeWarnOnce,
             ],
+        }
+    }
+
+    pub fn ttl_deferred_sweep_delete(id: impl Into<String>) -> Self {
+        Self {
+            id: "ttl-deferred-sweep-delete".into(),
+            steps: vec![
+                ScenarioStep::BuildValence,
+                ScenarioStep::EnsureTtlForTable,
+                ScenarioStep::TtlDeferredSweepDelete { id: id.into() },
+            ],
+        }
+    }
+
+    pub fn iter_scan_complete() -> Self {
+        Self {
+            id: "iter-scan-complete".into(),
+            steps: vec![ScenarioStep::BuildValence, ScenarioStep::IterScanComplete],
         }
     }
 

@@ -300,7 +300,15 @@ pub fn embedded_catalog() -> &'static [CatalogEntry] {
         entry("ttl-create-only-no-refresh", PathKind::Happy, |storage| {
             ScenarioSpec::ttl_create_only_no_refresh(ttl_record_id(storage, "create_only"))
         }),
-        entry_sad("ttl-non-native-warn", |_| ScenarioSpec::ttl_non_native_warn()),
+        entry_sad("ttl-non-native-warn", |_| {
+            ScenarioSpec::ttl_non_native_warn()
+        }),
+        entry("ttl-deferred-sweep-delete", PathKind::Happy, |storage| {
+            ScenarioSpec::ttl_deferred_sweep_delete(ttl_record_id(storage, "sweep_delete"))
+        }),
+        entry("iter-scan-complete", PathKind::Happy, |_| {
+            ScenarioSpec::iter_scan_complete()
+        }),
         entry("on-delete-cascade-same-backend", PathKind::Happy, |_| {
             ScenarioSpec::on_delete_cascade_same_backend()
         }),
@@ -336,21 +344,38 @@ fn ttl_catalog_applies(entry_id: &str, storage: StorageAdapter) -> bool {
         return false;
     }
     match entry_id {
-        "ttl-native-expire" => matches!(
+        "ttl-native-expire" => matches!(storage, StorageAdapter::Redis | StorageAdapter::MongoDb),
+        "ttl-deferred-stamp" => !matches!(storage, StorageAdapter::Redis | StorageAdapter::MongoDb),
+        "ttl-deferred-sweep-delete" => matches!(
             storage,
-            StorageAdapter::Redis | StorageAdapter::MongoDb
-        ),
-        "ttl-deferred-stamp" => !matches!(
-            storage,
-            StorageAdapter::Redis | StorageAdapter::MongoDb
+            StorageAdapter::Mem
+                | StorageAdapter::Sqlite
+                | StorageAdapter::Postgres
+                | StorageAdapter::HybridIndraPg
+                | StorageAdapter::SurrealMem
+                | StorageAdapter::SurrealRocksdb
         ),
         "ttl-create-only-no-refresh" => !matches!(storage, StorageAdapter::IndraDb),
-        "ttl-non-native-warn" => !matches!(
-            storage,
-            StorageAdapter::Redis | StorageAdapter::MongoDb
-        ),
+        "ttl-non-native-warn" => {
+            !matches!(storage, StorageAdapter::Redis | StorageAdapter::MongoDb)
+        }
         _ => true,
     }
+}
+
+/// Whether an iter catalog entry applies to this storage adapter.
+fn iter_catalog_applies(entry_id: &str, storage: StorageAdapter) -> bool {
+    if entry_id != "iter-scan-complete" {
+        return true;
+    }
+    // Platform paging for redis/mongo/indra is unsupported until keyset pushdown exists.
+    !matches!(
+        storage,
+        StorageAdapter::Redis
+            | StorageAdapter::MongoDb
+            | StorageAdapter::IndraDb
+            | StorageAdapter::AcmeStub
+    )
 }
 
 /// Whether an OnDelete catalog entry applies to this storage adapter.
@@ -414,6 +439,14 @@ pub async fn run_catalog_entry(entry: &CatalogEntry, storage: StorageAdapter) {
     }
 
     if !ttl_catalog_applies(entry.id, storage) {
+        return;
+    }
+    if !iter_catalog_applies(entry.id, storage) {
+        eprintln!(
+            "catalog entry {}/{}: iter unsupported on this adapter until paging fix — skipping",
+            entry.id,
+            storage.slug()
+        );
         return;
     }
     if !on_delete_catalog_applies(entry.id, storage) {

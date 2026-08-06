@@ -102,11 +102,12 @@ Living coverage map for Valence. Status legend:
 
 | Feature | Happy | Sad | Notes |
 |---------|-------|-----|-------|
-| Table TTL (create-only) | Y | Y | Catalog: `ttl-native-expire` (Redis/Mongo), `ttl-deferred-stamp` (Deferred/Unsupported linger without Chronon), `ttl-create-only-no-refresh`, `ttl-non-native-warn`. Platform sweeper delete-after-sweep: `valence-platform` `ttl_sweep_*` integ (`ttl-deferred-sweep-delete`). Bench: **not required**. Mongo purge timing not waited (TTL monitor). |
+| Table TTL (create-only) | Y | Y | Catalog: `ttl-native-expire` (Redis/Mongo), `ttl-deferred-stamp` (Deferred/Unsupported linger without Chronon), `ttl-deferred-sweep-delete` (Deferred adapters: expired row gone), `ttl-create-only-no-refresh`, `ttl-non-native-warn`. Platform budgeted sweeper: `valence-platform` `ttl_sweep_*` / hybrid integ. Bench: **not required**. Mongo purge timing not waited (TTL monitor). |
 | Side effects on queued/cascade physical delete | Y (platform TM-V3 cascade-child SE) | Y (Restrict → SE=0) | Platform integ; L0 catalog uses `apply_deletion_node` without Chronon SE |
-| Iters / trait mixin / encrypted | N | N | Schedule after query+hop program. |
+| Iters / trait mixin / encrypted | Y (`iter-scan-complete` on SQL/Surreal/mem/hybrid) | soft-skip | Soft-skip Redis/Mongo/Indra/Acme until platform keyset pushdown. Platform: `iter_scan_complete` test. Trait mixin / encrypted still N. |
 
-Registered campaign scenario IDs: `ttl-native-expire`, `ttl-deferred-stamp`, `ttl-create-only-no-refresh`, `ttl-non-native-warn`,
+Registered campaign scenario IDs: `ttl-native-expire`, `ttl-deferred-stamp`, `ttl-deferred-sweep-delete`, `ttl-create-only-no-refresh`, `ttl-non-native-warn`,
+`iter-scan-complete`,
 `on-delete-cascade-same-backend`, `on-delete-set-null`, `on-delete-remove-edge`, `on-delete-restrict-blocks`,
 `on-delete-cascade-cross-engine`, `on-delete-set-null-cross-engine` (AcmeStub skipped for OnDelete / TTL).
 

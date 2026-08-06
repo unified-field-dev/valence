@@ -58,7 +58,9 @@ pub(super) async fn run_step(
         | ScenarioStep::EnsureTtlForTable
         | ScenarioStep::TtlNativeOrLingerContract { .. }
         | ScenarioStep::TtlCreateOnlyNoRefresh { .. }
-        | ScenarioStep::TtlNonNativeWarnOnce => ttl::run(session, step, mode).await,
+        | ScenarioStep::TtlNonNativeWarnOnce
+        | ScenarioStep::TtlDeferredSweepDelete { .. }
+        | ScenarioStep::IterScanComplete => ttl::run(session, step, mode).await,
         ScenarioStep::OnDeleteCascadeSameBackend
         | ScenarioStep::OnDeleteSetNull
         | ScenarioStep::OnDeleteRemoveEdge
@@ -115,6 +117,8 @@ pub(super) fn step_label(step: &ScenarioStep) -> String {
         ScenarioStep::TtlNativeOrLingerContract { .. } => "ttl_native_or_linger".into(),
         ScenarioStep::TtlCreateOnlyNoRefresh { .. } => "ttl_create_only_no_refresh".into(),
         ScenarioStep::TtlNonNativeWarnOnce => "ttl_non_native_warn_once".into(),
+        ScenarioStep::TtlDeferredSweepDelete { .. } => "ttl_deferred_sweep_delete".into(),
+        ScenarioStep::IterScanComplete => "iter_scan_complete".into(),
         ScenarioStep::OnDeleteCascadeSameBackend => "on_delete_cascade_same_backend".into(),
         ScenarioStep::OnDeleteSetNull => "on_delete_set_null".into(),
         ScenarioStep::OnDeleteRemoveEdge => "on_delete_remove_edge".into(),
