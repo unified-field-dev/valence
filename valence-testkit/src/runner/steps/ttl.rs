@@ -151,16 +151,12 @@ async fn iter_scan_complete(session: &mut BootstrapSession) -> Result<(), String
             || engine.contains("hybrid")
         {
             CompiledQuery::new(
-                format!(
-                    "SELECT id FROM {CATALOG_ITER_PROBE_TABLE} ORDER BY id ASC {window}"
-                ),
+                format!("SELECT id FROM {CATALOG_ITER_PROBE_TABLE} ORDER BY id ASC {window}"),
                 vec![],
             )
         } else {
             CompiledQuery::new(
-                format!(
-                    "SELECT VALUE id FROM {CATALOG_ITER_PROBE_TABLE} ORDER BY id ASC {window}"
-                ),
+                format!("SELECT VALUE id FROM {CATALOG_ITER_PROBE_TABLE} ORDER BY id ASC {window}"),
                 vec![],
             )
         };
