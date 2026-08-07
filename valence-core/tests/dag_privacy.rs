@@ -94,7 +94,7 @@ fn node(table: &str, id: &str) -> DeletionNode {
     }
 }
 
-async fn mem_valence(actor: Actor) -> (Valence, Arc<dyn DatabaseBackend>) {
+fn mem_valence(actor: Actor) -> (Valence, Arc<dyn DatabaseBackend>) {
     let backend: Arc<dyn DatabaseBackend> = Arc::new(InMemoryBackend::new());
     let v = Valence::builder()
         .add_backend("default", Arc::clone(&backend))
@@ -114,8 +114,7 @@ async fn tm_p1_child_delete_deny_fails() {
 
     let (v, backend) = mem_valence(Actor::User {
         user_id: "u1".into(),
-    })
-    .await;
+    });
     backend
         .create_record("dag_priv_parent", serde_json::json!({"id": "p1"}))
         .await
@@ -148,8 +147,7 @@ async fn tm_p2_all_delete_allow_succeeds() {
 
     let (v, backend) = mem_valence(Actor::User {
         user_id: "u1".into(),
-    })
-    .await;
+    });
     backend
         .create_record("dag_priv_ok_p", serde_json::json!({"id": "p1"}))
         .await
@@ -186,8 +184,7 @@ async fn tm_p3_restrict_checked_before_privacy_in_queue_delete_order() {
     };
     let (v, _) = mem_valence(Actor::User {
         user_id: "u1".into(),
-    })
-    .await;
+    });
     let reg = SchemaRegistry::new();
     // No nodes → privacy walk is a no-op; callers must still refuse on restrict_violations.
     check_dag_delete_privacy_with_registry(&dag, &v, &reg)
@@ -209,8 +206,7 @@ async fn tm_p4_delete_without_read_succeeds() {
 
     let (v, backend) = mem_valence(Actor::User {
         user_id: "cleaner".into(),
-    })
-    .await;
+    });
     backend
         .create_record(
             "dag_priv_secret",
