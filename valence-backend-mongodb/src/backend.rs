@@ -208,7 +208,7 @@ impl MongoBackend {
                 if let mongodb::bson::Bson::DateTime(dt) = v {
                     let millis = dt.timestamp_millis();
                     let chrono_dt = chrono::DateTime::from_timestamp_millis(millis)
-                        .unwrap_or_else(|| chrono::DateTime::UNIX_EPOCH);
+                        .unwrap_or(chrono::DateTime::UNIX_EPOCH);
                     map.insert(
                         k,
                         Value::String(

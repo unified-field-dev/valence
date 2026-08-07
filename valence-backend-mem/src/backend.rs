@@ -352,7 +352,9 @@ impl DatabaseBackend for InMemoryBackend {
 
     /// No DDL on mem — uniqueness is enforced by the `SELECT VALUE id` probe in codegen.
     async fn define_unique_index(&self, _table: &str, _field: &str) -> Result<()> {
-        Ok(())
+        Err(valence_core::Error::Internal(
+            "unique indexes not supported on in-memory backend".into(),
+        ))
     }
 
     fn ttl_capability(&self) -> valence_core::ttl::BackendTtlCapability {
