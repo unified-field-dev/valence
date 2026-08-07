@@ -8,9 +8,7 @@ use serde_json::json;
 use valence_backend_mem::InMemoryBackend;
 use valence_core::actor::Actor;
 use valence_core::deletion::dag::{DeletionAction, DeletionDag, DeletionNode};
-use valence_core::deletion::{
-    apply_deletion_node, check_dag_delete_privacy_with_registry,
-};
+use valence_core::deletion::{apply_deletion_node, check_dag_delete_privacy_with_registry};
 use valence_core::evaluator::DEFAULT_IN_MEMORY;
 use valence_core::privacy_policies::common::{PUBLIC_READ, SYSTEM_ONLY};
 use valence_core::record_id::RecordId;
@@ -75,7 +73,10 @@ fn base_schema(name: &str, connections: Vec<SchemaConnection>) -> &'static Schem
 
 fn mem_valence() -> Valence {
     Valence::builder()
-        .add_backend("default", Arc::new(InMemoryBackend::new()) as Arc<dyn DatabaseBackend>)
+        .add_backend(
+            "default",
+            Arc::new(InMemoryBackend::new()) as Arc<dyn DatabaseBackend>,
+        )
         .with_actor(Actor::User {
             user_id: "u1".into(),
         })
@@ -93,10 +94,7 @@ async fn tm_s3_wave_order_remove_edge_before_set_null_before_cascade() {
         0
     );
     assert_eq!(
-        DeletionAction::SetNull {
-            field: "fk".into()
-        }
-        .wave_order(),
+        DeletionAction::SetNull { field: "fk".into() }.wave_order(),
         1
     );
     assert_eq!(DeletionAction::CascadeDelete.wave_order(), 2);
@@ -224,9 +222,7 @@ async fn tm_s8_idempotent_missing_row_and_empty_edges() {
         &DeletionNode {
             table: "gone".into(),
             record_id: "x".into(),
-            action: DeletionAction::SetNull {
-                field: "fk".into(),
-            },
+            action: DeletionAction::SetNull { field: "fk".into() },
             depth: 0,
             connection_name: "c".into(),
             from_table: "p".into(),

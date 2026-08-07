@@ -1,9 +1,9 @@
 //! MongoDB native TTL index helpers.
 
 use mongodb::bson::doc;
+use mongodb::bson::Document;
 use mongodb::options::IndexOptions;
 use mongodb::{Collection, IndexModel};
-use mongodb::bson::Document;
 
 use valence_core::ttl::{BackendTtlCapability, EXPIRE_AT_FIELD};
 use valence_core::{Error, Result};

@@ -41,7 +41,10 @@ async fn count_where_thing_eq_filters_by_fk() {
         "persona",
     )
     .expect("compile");
-    let rows = backend.execute_compiled_query(&compiled).await.expect("count");
+    let rows = backend
+        .execute_compiled_query(&compiled)
+        .await
+        .expect("count");
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].as_i64(), Some(1));
 

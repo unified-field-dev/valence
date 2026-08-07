@@ -493,8 +493,7 @@ valence_schema! {
         fs::write(nested.join("widget_valence_schema.rs"), MINIMAL_SCHEMA).expect("schema");
         fs::write(root.path().join("skip.txt"), "nope").expect("non-rs");
 
-        let found =
-            collect_files_with_suffix(root.path(), DEFAULT_SCHEMA_SUFFIX).expect("collect");
+        let found = collect_files_with_suffix(root.path(), DEFAULT_SCHEMA_SUFFIX).expect("collect");
         assert_eq!(found.len(), 1);
         assert!(found[0].ends_with("valence/domain/widget_valence_schema.rs"));
     }

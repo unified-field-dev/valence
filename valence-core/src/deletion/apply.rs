@@ -40,13 +40,8 @@ async fn apply_cascade_delete(table: &str, record_id: &str, valence: &Valence) -
         return Ok(());
     };
     if let Some(schema) = SchemaRegistry::global().get_schema(table) {
-        PrivacyEvaluator::check_entity_access(
-            schema,
-            PrivacyOperation::Delete,
-            &existing,
-            valence,
-        )
-        .await?;
+        PrivacyEvaluator::check_entity_access(schema, PrivacyOperation::Delete, &existing, valence)
+            .await?;
     }
     let backend = valence.backend_for_table(table)?;
     backend.delete_record(table, record_id).await?;
@@ -76,7 +71,9 @@ async fn apply_remove_edge(
     valence: &Valence,
 ) -> Result<()> {
     let endpoint = RecordId::new(table, record_id);
-    let backend = valence.backend_for_table(table).or_else(|_| valence.active_backend())?;
+    let backend = valence
+        .backend_for_table(table)
+        .or_else(|_| valence.active_backend())?;
     for to in backend.get_edge_targets(&endpoint, edge_table).await? {
         valence.unrelate_edge(edge_table, &endpoint, &to).await?;
     }

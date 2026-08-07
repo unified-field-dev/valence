@@ -9,10 +9,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 /// Type-erased delete side-effect runner (before-row as JSON).
-pub type DeleteSideEffectDispatchFn = fn(
-    Valence,
-    serde_json::Value,
-) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
+pub type DeleteSideEffectDispatchFn =
+    fn(Valence, serde_json::Value) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
 
 /// One registered delete side-effect dispatcher for a table (submitted by codegen).
 #[derive(Copy, Clone)]

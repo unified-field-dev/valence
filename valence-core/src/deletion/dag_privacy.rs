@@ -28,7 +28,10 @@ pub async fn check_dag_delete_privacy_with_registry(
     registry: &SchemaRegistry,
 ) -> Result<()> {
     for node in &dag.nodes {
-        if !matches!(node.action, crate::deletion::dag::DeletionAction::CascadeDelete) {
+        if !matches!(
+            node.action,
+            crate::deletion::dag::DeletionAction::CascadeDelete
+        ) {
             continue;
         }
         let Some(existing) =
@@ -40,20 +43,14 @@ pub async fn check_dag_delete_privacy_with_registry(
         let Some(schema) = registry.get_schema(node.table.as_str()) else {
             continue;
         };
-        PrivacyEvaluator::check_entity_access(
-            schema,
-            PrivacyOperation::Delete,
-            &existing,
-            valence,
-        )
-        .await
-        .map_err(|e| match e {
-            Error::Privacy(msg) => Error::Privacy(format!(
-                "delete denied for table {}: {msg}",
-                node.table
-            )),
-            other => other,
-        })?;
+        PrivacyEvaluator::check_entity_access(schema, PrivacyOperation::Delete, &existing, valence)
+            .await
+            .map_err(|e| match e {
+                Error::Privacy(msg) => {
+                    Error::Privacy(format!("delete denied for table {}: {msg}", node.table))
+                }
+                other => other,
+            })?;
     }
     Ok(())
 }

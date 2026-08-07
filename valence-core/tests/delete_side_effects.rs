@@ -7,9 +7,7 @@ use std::sync::Arc;
 use serde_json::json;
 use valence_backend_mem::InMemoryBackend;
 use valence_core::actor::Actor;
-use valence_core::deletion::{
-    dispatch_queued_delete_side_effects, DeleteSideEffectDescriptor,
-};
+use valence_core::deletion::{dispatch_queued_delete_side_effects, DeleteSideEffectDescriptor};
 use valence_core::Valence;
 
 static SE_CALLS: AtomicUsize = AtomicUsize::new(0);
@@ -60,12 +58,8 @@ async fn tm_v2_dispatch_runs_registered_delete_side_effect() {
         .build()
         .unwrap();
 
-    dispatch_queued_delete_side_effects(
-        "se_dispatch_probe",
-        json!({"id": "r1", "name": "x"}),
-        &v,
-    )
-    .await;
+    dispatch_queued_delete_side_effects("se_dispatch_probe", json!({"id": "r1", "name": "x"}), &v)
+        .await;
     assert_eq!(SE_CALLS.load(Ordering::SeqCst), 1);
 
     // Unknown table: no-op
@@ -85,11 +79,6 @@ async fn tm_v4_side_effect_error_does_not_fail_dispatch() {
         .unwrap();
 
     // Completes successfully even when the registered handler "fails" internally.
-    dispatch_queued_delete_side_effects(
-        "se_dispatch_err_probe",
-        json!({"id": "r1"}),
-        &v,
-    )
-    .await;
+    dispatch_queued_delete_side_effects("se_dispatch_err_probe", json!({"id": "r1"}), &v).await;
     assert_eq!(SE_ERR_CALLS.load(Ordering::SeqCst), 1);
 }

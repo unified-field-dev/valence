@@ -11,9 +11,7 @@ pub enum DeletionAction {
         field: String,
     },
     /// Remove M2M edges for this endpoint in `edge_table` (keep both rows).
-    RemoveEdge {
-        edge_table: String,
-    },
+    RemoveEdge { edge_table: String },
 }
 
 impl DeletionAction {

@@ -322,8 +322,7 @@ async fn collect_set_null_and_remove_edge_for_entity(
                         if skip_graph_table(&child_table) {
                             continue;
                         }
-                        let kids =
-                            select_child_ids_hasmany(v, &child_table, rf, tbl, rid).await?;
+                        let kids = select_child_ids_hasmany(v, &child_table, rf, tbl, rid).await?;
                         for kid in kids {
                             nodes.push(DeletionNode {
                                 table: child_table.clone(),
@@ -388,9 +387,7 @@ async fn collect_set_null_and_remove_edge_for_entity(
             {
                 continue;
             }
-            for kid in
-                select_hasone_cascade_children(v, other, &conn.from_field, tbl, rid).await?
-            {
+            for kid in select_hasone_cascade_children(v, other, &conn.from_field, tbl, rid).await? {
                 nodes.push(DeletionNode {
                     table: other.to_string(),
                     record_id: kid,
@@ -551,10 +548,8 @@ impl DeletionDag {
                 connection_name: "cascade".to_string(),
                 from_table: t.clone(),
             });
-            collect_set_null_and_remove_edge_for_entity(
-                v, t, r, *d, registry, traits, &mut nodes,
-            )
-            .await?;
+            collect_set_null_and_remove_edge_for_entity(v, t, r, *d, registry, traits, &mut nodes)
+                .await?;
         }
 
         let dag = Self::from_nodes(root_table, root_record_id, nodes, violations);

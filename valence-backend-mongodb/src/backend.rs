@@ -212,8 +212,7 @@ impl MongoBackend {
                     map.insert(
                         k,
                         Value::String(
-                            chrono_dt
-                                .to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                            chrono_dt.to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
                         ),
                     );
                     continue;

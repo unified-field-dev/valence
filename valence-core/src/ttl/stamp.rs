@@ -48,10 +48,7 @@ pub fn stamp_expire_at_if_absent(content: &mut Value, policy: &SchemaTtlPolicy) 
 fn insert_expire(obj: &mut Map<String, Value>, policy: &SchemaTtlPolicy) {
     let secs = i64::try_from(policy.seconds).unwrap_or(i64::MAX);
     let at = Utc::now() + Duration::seconds(secs);
-    obj.insert(
-        EXPIRE_AT_FIELD.to_string(),
-        Value::String(at.to_rfc3339()),
-    );
+    obj.insert(EXPIRE_AT_FIELD.to_string(), Value::String(at.to_rfc3339()));
 }
 
 /// Prepare `content` for create / creating-upsert when the table has a TTL policy.
@@ -138,7 +135,9 @@ mod tests {
     #[test]
     fn should_stamp_for_deferred_and_native() {
         assert!(should_stamp_expire_at(BackendTtlCapability::Deferred));
-        assert!(should_stamp_expire_at(BackendTtlCapability::SupportedNative));
+        assert!(should_stamp_expire_at(
+            BackendTtlCapability::SupportedNative
+        ));
         assert!(!should_stamp_expire_at(BackendTtlCapability::Unsupported));
     }
 

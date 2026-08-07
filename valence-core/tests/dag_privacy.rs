@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use valence_backend_mem::InMemoryBackend;
 use valence_core::actor::Actor;
-use valence_core::deletion::dag::{DeletionAction, DeletionDag, DeletionNode};
 use valence_core::deletion::check_dag_delete_privacy_with_registry;
+use valence_core::deletion::dag::{DeletionAction, DeletionDag, DeletionNode};
 use valence_core::error::Error;
 use valence_core::evaluator::DEFAULT_IN_MEMORY;
 use valence_core::privacy::PrivacyRule;
