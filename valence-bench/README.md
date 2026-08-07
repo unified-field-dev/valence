@@ -1,6 +1,6 @@
 # valence-bench
 
-Binary CLI for synthetic Valence throughput experiments (`bm-v0`..`bm-v25`). Highlights: [PERFORMANCE.md](PERFORMANCE.md). Full experiment registry and AWS baselines live in the private `uf-live-cloud-lab` valence docs.
+Binary CLI for synthetic Valence throughput experiments (`bm-v0`..`bm-v25`). Highlights: [PERFORMANCE.md](PERFORMANCE.md). Full experiment registry and AWS baselines come from AWS campaign runs.
 
 ## Quick start
 

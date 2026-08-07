@@ -1,6 +1,6 @@
 # Valence performance
 
-Measured on AWS (`c6i.xlarge` class hosts unless noted). These rows are **debug builds** from a two-host campaign — comparative adapter ranking, not product SLOs. Full matrices live in the private `uf-live-cloud-lab` valence performance study.
+Measured on AWS (`c6i.xlarge` class hosts unless noted). These rows are **debug builds** from a two-host campaign — comparative adapter ranking, not product SLOs. Full matrices come from AWS campaign runs.
 
 ## Write capacity
 

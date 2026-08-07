@@ -92,12 +92,11 @@ async fn redis_ttl_create_sets_expire_not_refreshed_on_update() {
         .await
         .unwrap();
 
-    let url = match std::env::var(TEST_URL_ENV).or_else(|_| std::env::var(URL_ENV)) {
-        Ok(u) => u,
-        Err(_) => {
-            eprintln!("no redis URL env — skipping TTL key check");
-            return;
-        }
+    let url = if let Ok(u) = std::env::var(TEST_URL_ENV).or_else(|_| std::env::var(URL_ENV)) {
+        u
+    } else {
+        eprintln!("no redis URL env — skipping TTL key check");
+        return;
     };
     let prefix = std::env::var(KEY_PREFIX_ENV).unwrap_or_else(|_| "valence".into());
     let doc_key = format!("{prefix}:doc:{table}:{id}");

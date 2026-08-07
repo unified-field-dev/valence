@@ -10,7 +10,7 @@ Living coverage map for Valence. Status legend:
 | `H` | Host-owned (outside this repo) |
 | `D` | Deferred by design |
 
-**Target contract:** every single-backend feature E2E row runs on all storage adapters (mem, sqlite, surreal-mem, surreal-rocksdb, indradb, postgres, mongodb, redis; acme-stub where the port applies). Full matrix + benches execute on **AWS** — operator runbook lives in the sibling checkout `uf-live-cloud-lab/valence/docs/AWS_E2E_BENCH_CAMPAIGN.md`. Local `./scripts/gate.sh` stays unit/clippy only.
+**Target contract:** every single-backend feature E2E row runs on all storage adapters (mem, sqlite, surreal-mem, surreal-rocksdb, indradb, postgres, mongodb, redis; acme-stub where the port applies). Full matrix + benches execute on **AWS**. Local `./scripts/gate.sh` stays unit/clippy only.
 
 ## Feature × Happy / Sad / Bench
 

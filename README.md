@@ -189,7 +189,7 @@ DATABASE_URL=postgres://… cargo run -p uf-valence --example quickstart_postgre
 - [CONTRIBUTING.md](CONTRIBUTING.md) — verify commands and build guardrails before PRs
 - [docs/VERIFICATION.md](docs/VERIFICATION.md) — test and coverage baseline
 - [docs/E2E_BENCH_COVERAGE.md](docs/E2E_BENCH_COVERAGE.md) — feature × happy/sad/bench matrix
-- AWS E2E/bench campaign (operator): `~/unified-field/uf-live-cloud-lab/valence/`
+- AWS E2E/bench campaign (operator): runs on AWS EC2; runbooks stay outside this public tree
 
 ## Composable storage (FAQ)
 
