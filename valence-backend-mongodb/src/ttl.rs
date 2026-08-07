@@ -13,16 +13,6 @@ pub fn ttl_capability() -> BackendTtlCapability {
     BackendTtlCapability::SupportedNative
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn capability_is_native() {
-        assert_eq!(ttl_capability(), BackendTtlCapability::SupportedNative);
-    }
-}
-
 /// Idempotent TTL index on [`EXPIRE_AT_FIELD`] with `expireAfterSeconds: 0`.
 pub async fn apply_ttl_policy(coll: &Collection<Document>) -> Result<()> {
     let index = IndexModel::builder()
@@ -38,4 +28,14 @@ pub async fn apply_ttl_policy(coll: &Collection<Document>) -> Result<()> {
         .await
         .map_err(|e| Error::database(e.to_string()))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capability_is_native() {
+        assert_eq!(ttl_capability(), BackendTtlCapability::SupportedNative);
+    }
 }

@@ -68,16 +68,6 @@ pub async fn expire_uniq_keys(
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn capability_is_native() {
-        assert_eq!(ttl_capability(), BackendTtlCapability::SupportedNative);
-    }
-}
-
 /// Remove `id` from the table membership set when the document key is gone.
 pub async fn srem_orphan_id(
     conn: &mut ConnectionManager,
@@ -91,4 +81,14 @@ pub async fn srem_orphan_id(
         .await
         .map_err(|e| Error::database(e.to_string()))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capability_is_native() {
+        assert_eq!(ttl_capability(), BackendTtlCapability::SupportedNative);
+    }
 }
