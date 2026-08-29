@@ -157,7 +157,7 @@ pub use ports::endpoints::{
 pub use ports::secrets::{EnvSecretProvider, NoOpSecretProvider, SecretProvider};
 pub use privacy::{
     privacy_bypass_active, PolicyEvaluator, PrivacyEvaluator, PrivacyOperation, PrivacyRule,
-    PRIVACY_BYPASS_ENV, PRIVACY_BYPASS_FORCE_ON_ENV,
+    DEFER_TO_EDGE_MAX_DEPTH, PRIVACY_BYPASS_ENV, PRIVACY_BYPASS_FORCE_ON_ENV,
 };
 pub use query::{
     DateTimePredicate, HopSource, HopType, IdOnlyRecord, IntPredicate, NullPredicate, QueryCore,

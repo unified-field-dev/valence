@@ -151,6 +151,34 @@ impl SchemaRegistry {
 
 static GLOBAL_REGISTRY: OnceLock<SchemaRegistry> = OnceLock::new();
 
+/// Process-local overlay consulted before [`SchemaRegistry::global`] (tests / dynamic hosts).
+static SCHEMA_OVERLAY: std::sync::LazyLock<
+    std::sync::RwLock<HashMap<String, &'static SchemaMetadata>>,
+> = std::sync::LazyLock::new(|| std::sync::RwLock::new(HashMap::new()));
+
+impl SchemaRegistry {
+    /// Insert or replace a schema visible to [`Self::lookup`] (used by defer-to-edge parent hops).
+    pub fn register_overlay(metadata: &'static SchemaMetadata) {
+        SCHEMA_OVERLAY
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(metadata.table_name.to_string(), metadata);
+    }
+
+    /// Resolve a table: overlay first, then the process-global registry.
+    pub fn lookup(table_name: &str) -> Option<&'static SchemaMetadata> {
+        if let Some(meta) = SCHEMA_OVERLAY
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(table_name)
+            .copied()
+        {
+            return Some(meta);
+        }
+        Self::global().get_schema(table_name)
+    }
+}
+
 impl Default for SchemaRegistry {
     fn default() -> Self {
         Self::new()
