@@ -109,7 +109,7 @@ impl PrivacyEvaluator {
             schema.schema.traits.iter().any(|trait_name| {
                 trait_reg
                     .get_definition(trait_name)
-                    .is_some_and(|def| def.connection_names.iter().any(|n| *n == edge))
+                    .is_some_and(|def| def.connection_names.contains(&edge))
             })
         };
         if has_connection || has_overlay || has_record_field || has_trait_connection {
@@ -155,20 +155,19 @@ impl PrivacyEvaluator {
             return Err(Error::Privacy(msg));
         };
 
-        let parent = match resolve_parent_record_id(edge_val) {
-            Ok(p) => p,
-            Err(_) => {
-                let msg = format!(
-                    "Access denied: defer_to_edge field \"{edge}\" is not a valid record reference"
-                );
-                crate::instrumentation::privacy::record_privacy_denial(
-                    schema.table_name,
-                    "defer_to_edge_bad_source",
-                    telemetry_label,
-                    &msg,
-                );
-                return Err(Error::Privacy(msg));
-            }
+        let parent = if let Ok(p) = resolve_parent_record_id(edge_val) {
+            p
+        } else {
+            let msg = format!(
+                "Access denied: defer_to_edge field \"{edge}\" is not a valid record reference"
+            );
+            crate::instrumentation::privacy::record_privacy_denial(
+                schema.table_name,
+                "defer_to_edge_bad_source",
+                telemetry_label,
+                &msg,
+            );
+            return Err(Error::Privacy(msg));
         };
 
         // Cycle key: prefer row id; for Create (often no id yet) use parent ref.
