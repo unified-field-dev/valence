@@ -52,9 +52,10 @@ fn policy_rules_tokens(rules: Option<&ParsedPolicyRules>) -> TokenStream {
     let allow = policy_rule_vec_tokens(&rules.allow);
     let block = policy_rule_vec_tokens(&rules.block);
     let always_block = policy_rule_vec_tokens(&rules.always_block);
-    let defer_to_edge = match &rules.defer_to_edge {
-        Some(edge) => quote! { Some(#edge.to_string()) },
-        None => quote! { None },
+    let defer_to_edge = if let Some(edge) = &rules.defer_to_edge {
+        quote! { Some(#edge.to_string()) }
+    } else {
+        quote! { None }
     };
 
     quote! {
