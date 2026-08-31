@@ -1,4 +1,10 @@
-//! Defer-to-edge read privacy: satellite rows inherit parent Read via a named edge.
+//! Defer-to-edge privacy: satellite rows inherit parent access via a named edge.
+//!
+//! Parent operation mapping:
+//! - Read → parent Read
+//! - Create → parent **Update** (append / forge-resistant vs open Create)
+//! - Update → parent Update
+//! - Delete → parent Delete
 
 use std::collections::HashSet;
 
@@ -23,14 +29,31 @@ pub(super) struct DeferCtx {
     depth: u8,
 }
 
+/// Parent privacy op evaluated when a satellite op uses `defer_to_edge`.
+#[must_use]
+pub fn parent_op_for_defer(satellite_op: PrivacyOperation) -> PrivacyOperation {
+    match satellite_op {
+        PrivacyOperation::Create => PrivacyOperation::Update,
+        other => other,
+    }
+}
+
 impl PrivacyEvaluator {
-    /// Resolve `defer_to_edge` from concrete schema read policy, else first trait read policy.
-    pub(super) fn resolve_defer_to_edge(schema: &SchemaMetadata) -> Option<String> {
+    /// Resolve `defer_to_edge` from the policy block for `op` (schema, else traits).
+    pub(super) fn resolve_defer_to_edge(
+        schema: &SchemaMetadata,
+        op: PrivacyOperation,
+    ) -> Option<String> {
         if let Some(edge) = schema
             .schema
             .policies
             .as_ref()
-            .and_then(|p| p.read.as_ref())
+            .and_then(|p| match op {
+                PrivacyOperation::Read => p.read.as_ref(),
+                PrivacyOperation::Create => p.create.as_ref(),
+                PrivacyOperation::Update => p.update.as_ref(),
+                PrivacyOperation::Delete => p.delete.as_ref(),
+            })
             .and_then(|r| r.defer_to_edge.clone())
         {
             return Some(edge);
@@ -44,10 +67,16 @@ impl PrivacyEvaluator {
             let Some(policies) = def.policies else {
                 continue;
             };
-            let Some(read) = policies.read else {
+            let rules = match op {
+                PrivacyOperation::Read => policies.read,
+                PrivacyOperation::Create => policies.create,
+                PrivacyOperation::Update => policies.update,
+                PrivacyOperation::Delete => policies.delete,
+            };
+            let Some(rules) = rules else {
                 continue;
             };
-            if let Some(edge) = read.defer_to_edge {
+            if let Some(edge) = rules.defer_to_edge {
                 return Some(edge.to_string());
             }
         }
@@ -60,6 +89,14 @@ impl PrivacyEvaluator {
             .schema
             .connections
             .iter()
+            .any(|c| c.name == edge || c.from_field == edge)
+            || schema
+                .schema
+                .edges
+                .iter()
+                .any(|e| e.from_field == edge || e.label.eq_ignore_ascii_case(edge));
+        let has_overlay = crate::schema::schema_connections_for_table(schema)
+            .iter()
             .any(|c| c.name == edge || c.from_field == edge);
         let has_record_field = schema.schema.fields.iter().any(|f| {
             f.name == edge
@@ -67,7 +104,15 @@ impl PrivacyEvaluator {
                     || f.field_type.starts_with("Record")
                     || f.field_type.contains("record"))
         });
-        if has_connection || has_record_field {
+        let has_trait_connection = {
+            let trait_reg = crate::TraitRegistry::global();
+            schema.schema.traits.iter().any(|trait_name| {
+                trait_reg
+                    .get_definition(trait_name)
+                    .is_some_and(|def| def.connection_names.iter().any(|n| *n == edge))
+            })
+        };
+        if has_connection || has_overlay || has_record_field || has_trait_connection {
             return Ok(());
         }
         Err(Error::Validation(format!(
@@ -78,6 +123,7 @@ impl PrivacyEvaluator {
 
     pub(super) async fn evaluate_defer_to_edge(
         schema: &SchemaMetadata,
+        satellite_op: PrivacyOperation,
         raw_data: &serde_json::Value,
         v: &Valence,
         edge: &str,
@@ -97,33 +143,6 @@ impl PrivacyEvaluator {
             );
             return Err(Error::Privacy(msg));
         }
-
-        let Some(row_id) = raw_data
-            .get("id")
-            .and_then(|v| extract_id_from_select_value(v).ok())
-        else {
-            let msg = "Access denied: defer_to_edge row missing id".to_string();
-            crate::instrumentation::privacy::record_privacy_denial(
-                schema.table_name,
-                "defer_to_edge_missing_id",
-                telemetry_label,
-                &msg,
-            );
-            return Err(Error::Privacy(msg));
-        };
-
-        let key = (schema.table_name.to_string(), row_id);
-        if !ctx.visited.insert(key.clone()) {
-            let msg = "Access denied: defer_to_edge cycle detected".to_string();
-            crate::instrumentation::privacy::record_privacy_denial(
-                schema.table_name,
-                "defer_to_edge_cycle",
-                telemetry_label,
-                &msg,
-            );
-            return Err(Error::Privacy(msg));
-        }
-        ctx.depth = ctx.depth.saturating_add(1);
 
         let Some(edge_val) = raw_data.get(edge).filter(|v| !v.is_null()) else {
             let msg = format!("Access denied: defer_to_edge field \"{edge}\" missing or null");
@@ -151,6 +170,24 @@ impl PrivacyEvaluator {
                 return Err(Error::Privacy(msg));
             }
         };
+
+        // Cycle key: prefer row id; for Create (often no id yet) use parent ref.
+        let row_key = raw_data
+            .get("id")
+            .and_then(|v| extract_id_from_select_value(v).ok())
+            .unwrap_or_else(|| format!("create:{}:{}", parent.table(), parent.id()));
+        let key = (schema.table_name.to_string(), row_key);
+        if !ctx.visited.insert(key) {
+            let msg = "Access denied: defer_to_edge cycle detected".to_string();
+            crate::instrumentation::privacy::record_privacy_denial(
+                schema.table_name,
+                "defer_to_edge_cycle",
+                telemetry_label,
+                &msg,
+            );
+            return Err(Error::Privacy(msg));
+        }
+        ctx.depth = ctx.depth.saturating_add(1);
 
         let parent_schema = SchemaRegistry::lookup(parent.table()).ok_or_else(|| {
             Error::Validation(format!(
@@ -180,10 +217,12 @@ impl PrivacyEvaluator {
             return Err(Error::Privacy(msg));
         };
 
+        let parent_op = parent_op_for_defer(satellite_op);
+
         // Recurse with the original viewer actor (not System).
         Box::pin(Self::check_entity_access_with_ctx(
             parent_schema,
-            PrivacyOperation::Read,
+            parent_op,
             &parent_raw,
             v,
             ctx,

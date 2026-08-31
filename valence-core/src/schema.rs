@@ -100,9 +100,18 @@ impl SchemaRegistry {
         let mut registry = Self::new();
         for init in inventory::iter::<SchemaMetadataInit> {
             let metadata = (init.0)();
-            registry
-                .inner
-                .insert(metadata.table_name.to_string(), metadata);
+            let key = metadata.table_name.to_string();
+            if let Some(existing) = registry.inner.get(&key) {
+                // Prefer the richer registration when both `valence_schema!` (entity-only)
+                // and build.rs codegen (trait-merged) submit the same table.
+                let existing_score =
+                    existing.schema.fields.len() + existing.schema.connections.len();
+                let new_score = metadata.schema.fields.len() + metadata.schema.connections.len();
+                if new_score <= existing_score {
+                    continue;
+                }
+            }
+            registry.inner.insert(key, metadata);
         }
         registry
     }

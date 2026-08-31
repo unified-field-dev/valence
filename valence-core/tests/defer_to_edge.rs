@@ -136,7 +136,14 @@ fn parent_owner_schema(table: &str) -> &'static SchemaMetadata {
                 allow: vec![allow_rule("AUTH", &AUTHENTICATED)],
                 ..SchemaPolicyRules::default()
             }),
-            ..SchemaPolicies::default()
+            update: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("OWNER", &OWNER_BY_USER_FIELD)],
+                ..SchemaPolicyRules::default()
+            }),
+            delete: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("OWNER", &OWNER_BY_USER_FIELD)],
+                ..SchemaPolicyRules::default()
+            }),
         },
         vec![id_field(), user_field()],
     ))
@@ -159,10 +166,17 @@ fn history_defer_schema(table: &str, parent_table: &str) -> &'static SchemaMetad
                 ..SchemaPolicyRules::default()
             }),
             create: Some(SchemaPolicyRules {
-                allow: vec![allow_rule("SYSTEM", &SYSTEM_ONLY)],
+                defer_to_edge: Some("source".to_string()),
                 ..SchemaPolicyRules::default()
             }),
-            ..SchemaPolicies::default()
+            update: Some(SchemaPolicyRules {
+                defer_to_edge: Some("source".to_string()),
+                ..SchemaPolicyRules::default()
+            }),
+            delete: Some(SchemaPolicyRules {
+                defer_to_edge: Some("source".to_string()),
+                ..SchemaPolicyRules::default()
+            }),
         }),
         fields: vec![id_field(), source_field(parent_table)],
         edges: Vec::new(),
@@ -569,17 +583,57 @@ async fn defer_cycle_denies_sad() {
 }
 
 #[tokio::test]
-async fn create_ignores_defer_field() {
-    let hist = history_defer_schema("defer_hist_create", "defer_parent_create");
-    SchemaRegistry::register_overlay(hist);
-    let (v, _backend) = mem_valence(Actor::User {
+async fn create_defers_to_parent_update_allows_when_parent_updatable_happy() {
+    let parent = parent_owner_schema("defer_parent_create_ok");
+    let hist = history_defer_schema("defer_hist_create_ok", "defer_parent_create_ok");
+    register_pair(parent, hist);
+
+    let (v, backend) = mem_valence(Actor::User {
         user_id: "alice".into(),
     });
+    backend
+        .create_record(
+            "defer_parent_create_ok",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+
     let raw = serde_json::json!({
         "id": "h1",
-        "source": {"table": "defer_parent_create", "id": "p1"}
+        "source": {"table": "defer_parent_create_ok", "id": "p1"}
     });
-    // Create uses SYSTEM_ONLY allow — user should be denied by create policy, not defer.
+    PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Create,
+        &raw,
+        &v,
+    )
+    .await
+    .expect("owner create defers to parent Update");
+}
+
+#[tokio::test]
+async fn create_defers_to_parent_update_denies_when_parent_update_blocked_sad() {
+    let parent = parent_owner_schema("defer_parent_create_deny");
+    let hist = history_defer_schema("defer_hist_create_deny", "defer_parent_create_deny");
+    register_pair(parent, hist);
+
+    let (v, backend) = mem_valence(Actor::User {
+        user_id: "bob".into(),
+    });
+    backend
+        .create_record(
+            "defer_parent_create_deny",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_create_deny", "id": "p1"}
+    });
     let err = PrivacyEvaluator::check_entity_access(
         hist,
         valence_core::privacy::PrivacyOperation::Create,
@@ -587,8 +641,342 @@ async fn create_ignores_defer_field() {
         &v,
     )
     .await
-    .expect_err("user create denied");
-    assert!(matches!(err, Error::Privacy(_)));
+    .expect_err("stranger create must deny");
+    assert!(matches!(err, Error::Privacy(_)), "{err:?}");
+}
+
+#[tokio::test]
+async fn create_defer_does_not_use_parent_read_policy_sad() {
+    // Parent: AUTHENTICATED Read, OWNER Update — peer can Read but not Update.
+    let parent = meta(base_schema(
+        "defer_parent_read_not_update",
+        SchemaPolicies {
+            read: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("AUTH", &AUTHENTICATED)],
+                ..SchemaPolicyRules::default()
+            }),
+            create: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("AUTH", &AUTHENTICATED)],
+                ..SchemaPolicyRules::default()
+            }),
+            update: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("OWNER", &OWNER_BY_USER_FIELD)],
+                ..SchemaPolicyRules::default()
+            }),
+            delete: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("OWNER", &OWNER_BY_USER_FIELD)],
+                ..SchemaPolicyRules::default()
+            }),
+        },
+        vec![id_field(), user_field()],
+    ));
+    let hist = history_defer_schema("defer_hist_read_not_update", "defer_parent_read_not_update");
+    register_pair(parent, hist);
+
+    let (v, backend) = mem_valence(Actor::User {
+        user_id: "bob".into(),
+    });
+    backend
+        .create_record(
+            "defer_parent_read_not_update",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_read_not_update", "id": "p1"}
+    });
+    PrivacyEvaluator::check_entity_read(hist, &raw, &v)
+        .await
+        .expect("peer may read via parent Read");
+    let err = PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Create,
+        &raw,
+        &v,
+    )
+    .await
+    .expect_err("peer must not create via parent Read alone");
+    assert!(matches!(err, Error::Privacy(_)), "{err:?}");
+}
+
+#[tokio::test]
+async fn create_defer_missing_source_denies_sad() {
+    let parent = parent_owner_schema("defer_parent_create_nosrc");
+    let hist = history_defer_schema("defer_hist_create_nosrc", "defer_parent_create_nosrc");
+    register_pair(parent, hist);
+    let (v, _) = mem_valence(Actor::User {
+        user_id: "alice".into(),
+    });
+    let raw = serde_json::json!({"id": "h1", "source": serde_json::Value::Null});
+    let err = PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Create,
+        &raw,
+        &v,
+    )
+    .await
+    .expect_err("null source");
+    assert!(
+        matches!(err, Error::Privacy(ref m) if m.contains("missing")),
+        "{err:?}"
+    );
+}
+
+#[tokio::test]
+async fn create_defer_missing_parent_denies_sad() {
+    let parent = parent_owner_schema("defer_parent_create_gone");
+    let hist = history_defer_schema("defer_hist_create_gone", "defer_parent_create_gone");
+    register_pair(parent, hist);
+    let (v, _) = mem_valence(Actor::User {
+        user_id: "alice".into(),
+    });
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_create_gone", "id": "missing"}
+    });
+    let err = PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Create,
+        &raw,
+        &v,
+    )
+    .await
+    .expect_err("missing parent");
+    assert!(
+        matches!(err, Error::Privacy(ref m) if m.contains("not found")),
+        "{err:?}"
+    );
+}
+
+#[tokio::test]
+async fn create_defer_system_parent_fetch_does_not_elevate_viewer_happy() {
+    let parent = parent_owner_schema("defer_parent_create_viewer");
+    let hist = history_defer_schema("defer_hist_create_viewer", "defer_parent_create_viewer");
+    register_pair(parent, hist);
+    let (v, backend) = mem_valence(Actor::User {
+        user_id: "alice".into(),
+    });
+    backend
+        .create_record(
+            "defer_parent_create_viewer",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_create_viewer", "id": "p1"}
+    });
+    PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Create,
+        &raw,
+        &v,
+    )
+    .await
+    .expect("create ok");
+    assert!(
+        matches!(v.actor(), Actor::User { user_id } if user_id == "alice"),
+        "viewer must remain User after create defer"
+    );
+}
+
+#[tokio::test]
+async fn update_defers_to_parent_update_allows_happy() {
+    let parent = parent_owner_schema("defer_parent_upd_ok");
+    let hist = history_defer_schema("defer_hist_upd_ok", "defer_parent_upd_ok");
+    register_pair(parent, hist);
+    let (v, backend) = mem_valence(Actor::User {
+        user_id: "alice".into(),
+    });
+    backend
+        .create_record(
+            "defer_parent_upd_ok",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_upd_ok", "id": "p1"}
+    });
+    PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Update,
+        &raw,
+        &v,
+    )
+    .await
+    .expect("owner update defers");
+}
+
+#[tokio::test]
+async fn update_defers_to_parent_update_denies_sad() {
+    let parent = parent_owner_schema("defer_parent_upd_deny");
+    let hist = history_defer_schema("defer_hist_upd_deny", "defer_parent_upd_deny");
+    register_pair(parent, hist);
+    let (v, backend) = mem_valence(Actor::User {
+        user_id: "bob".into(),
+    });
+    backend
+        .create_record(
+            "defer_parent_upd_deny",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_upd_deny", "id": "p1"}
+    });
+    let err = PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Update,
+        &raw,
+        &v,
+    )
+    .await
+    .expect_err("stranger update denied");
+    assert!(matches!(err, Error::Privacy(_)), "{err:?}");
+}
+
+#[tokio::test]
+async fn delete_defers_to_parent_delete_allows_happy() {
+    let parent = parent_owner_schema("defer_parent_del_ok");
+    let hist = history_defer_schema("defer_hist_del_ok", "defer_parent_del_ok");
+    register_pair(parent, hist);
+    let (v, backend) = mem_valence(Actor::User {
+        user_id: "alice".into(),
+    });
+    backend
+        .create_record(
+            "defer_parent_del_ok",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_del_ok", "id": "p1"}
+    });
+    PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Delete,
+        &raw,
+        &v,
+    )
+    .await
+    .expect("owner delete defers");
+}
+
+#[tokio::test]
+async fn delete_defers_to_parent_delete_denies_sad() {
+    let parent = parent_owner_schema("defer_parent_del_deny");
+    let hist = history_defer_schema("defer_hist_del_deny", "defer_parent_del_deny");
+    register_pair(parent, hist);
+    let (v, backend) = mem_valence(Actor::User {
+        user_id: "bob".into(),
+    });
+    backend
+        .create_record(
+            "defer_parent_del_deny",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_del_deny", "id": "p1"}
+    });
+    let err = PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Delete,
+        &raw,
+        &v,
+    )
+    .await
+    .expect_err("stranger delete denied");
+    assert!(matches!(err, Error::Privacy(_)), "{err:?}");
+}
+
+#[tokio::test]
+async fn delete_defer_does_not_use_parent_read_or_update_sad() {
+    // Parent: AUTHENTICATED Read+Update, OWNER Delete — peer can update parent but not delete.
+    let parent = meta(base_schema(
+        "defer_parent_del_not_upd",
+        SchemaPolicies {
+            read: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("AUTH", &AUTHENTICATED)],
+                ..SchemaPolicyRules::default()
+            }),
+            create: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("AUTH", &AUTHENTICATED)],
+                ..SchemaPolicyRules::default()
+            }),
+            update: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("AUTH", &AUTHENTICATED)],
+                ..SchemaPolicyRules::default()
+            }),
+            delete: Some(SchemaPolicyRules {
+                allow: vec![allow_rule("OWNER", &OWNER_BY_USER_FIELD)],
+                ..SchemaPolicyRules::default()
+            }),
+        },
+        vec![id_field(), user_field()],
+    ));
+    let hist = history_defer_schema("defer_hist_del_not_upd", "defer_parent_del_not_upd");
+    register_pair(parent, hist);
+    let (v, backend) = mem_valence(Actor::User {
+        user_id: "bob".into(),
+    });
+    backend
+        .create_record(
+            "defer_parent_del_not_upd",
+            serde_json::json!({"id": "p1", "user": "alice"}),
+        )
+        .await
+        .unwrap();
+    let raw = serde_json::json!({
+        "id": "h1",
+        "source": {"table": "defer_parent_del_not_upd", "id": "p1"}
+    });
+    PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Update,
+        &raw,
+        &v,
+    )
+    .await
+    .expect("peer may update history via parent Update");
+    let err = PrivacyEvaluator::check_entity_access(
+        hist,
+        valence_core::privacy::PrivacyOperation::Delete,
+        &raw,
+        &v,
+    )
+    .await
+    .expect_err("peer must not delete via Read/Update alone");
+    assert!(matches!(err, Error::Privacy(_)), "{err:?}");
+}
+
+#[test]
+fn parent_op_for_defer_create_maps_to_update_unit() {
+    use valence_core::privacy::{parent_op_for_defer, PrivacyOperation};
+    assert_eq!(
+        parent_op_for_defer(PrivacyOperation::Create),
+        PrivacyOperation::Update
+    );
+    assert_eq!(
+        parent_op_for_defer(PrivacyOperation::Read),
+        PrivacyOperation::Read
+    );
+    assert_eq!(
+        parent_op_for_defer(PrivacyOperation::Delete),
+        PrivacyOperation::Delete
+    );
 }
 
 #[tokio::test]

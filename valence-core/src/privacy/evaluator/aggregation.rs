@@ -217,15 +217,17 @@ impl PrivacyEvaluator {
             return Ok(());
         }
 
-        let defer_edge = if op == PrivacyOperation::Read {
-            Self::resolve_defer_to_edge(schema)
-        } else {
-            None
-        };
-
-        if let Some(ref edge) = defer_edge {
-            return Self::evaluate_defer_to_edge(schema, raw_data, v, edge, ctx, telemetry_label)
-                .await;
+        if let Some(ref edge) = Self::resolve_defer_to_edge(schema, op) {
+            return Self::evaluate_defer_to_edge(
+                schema,
+                op,
+                raw_data,
+                v,
+                edge,
+                ctx,
+                telemetry_label,
+            )
+            .await;
         }
 
         if always_allow.is_empty()

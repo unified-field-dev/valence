@@ -7,7 +7,7 @@ mod rules;
 /// Privacy evaluation engine
 pub struct PrivacyEvaluator;
 
-pub use defer_to_edge::DEFER_TO_EDGE_MAX_DEPTH;
+pub use defer_to_edge::{parent_op_for_defer, DEFER_TO_EDGE_MAX_DEPTH};
 
 #[cfg(test)]
 mod tests {
