@@ -17,7 +17,7 @@
 //! - **Target classification** — Maps receivers to Schema / Trait / Unscoped for the
 //!   valence-uf-app Data uses surfaces (schema card, trait card, Unscoped page).
 //!   [Get started](#getting-started)
-//! - **Purpose quality lint** — [`lint_purpose`] checks trust-copy banlists and
+//! - **Purpose quality lint** — [`lint_purpose()`] checks trust-copy banlists and
 //!   tier depth so migration templates cannot re-land. [Get started](#lint-a-purpose-string)
 //! - **Test exclusion** — When [`Config::exclude_tests_from_snapshot`] is set, omits
 //!   `tests/` paths and `*_test.rs` files from the generated UI snapshot so fixture
@@ -120,8 +120,8 @@ mod inventory;
 pub mod lint_purpose;
 mod scan;
 
-pub use lint_purpose::{lint_purpose, purpose_passes, GapCode, PurposeTier};
 pub use inventory::{inventory_csv_header, inventory_csv_row, lint_scan_hits, InventoryRow};
+pub use lint_purpose::{lint_purpose, purpose_passes, GapCode, PurposeTier};
 
 use std::path::PathBuf;
 use std::time::Instant;

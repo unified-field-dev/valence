@@ -196,7 +196,14 @@ fn looks_like_path_op_duplication(s: &str) -> bool {
     let t = s.trim();
     let lower = t.to_ascii_lowercase();
     let ops = [
-        "get ", "query ", "create ", "upsert ", "update ", "delete ", "merge ", "delete_now ",
+        "get ",
+        "query ",
+        "create ",
+        "upsert ",
+        "update ",
+        "delete ",
+        "merge ",
+        "delete_now ",
         "get_mutable ",
     ];
     let starts_op = ops.iter().any(|op| lower.starts_with(op));
@@ -257,19 +264,27 @@ mod tests {
     #[test]
     fn enroll_gold_happy() {
         let p = "Before we begin **enrollment** on setting up your **authenticator**, we first verify the user account **exists** by **loading it with the provided id**. **No other information** is required, so we discard it immediately.";
-        assert!(purpose_passes(p, PurposeTier::S3), "{:?}", lint_purpose(p, PurposeTier::S3));
+        assert!(
+            purpose_passes(p, PurposeTier::S3),
+            "{:?}",
+            lint_purpose(p, PurposeTier::S3)
+        );
     }
 
     #[test]
     fn s1_thin_sad() {
-        let gaps = lint_purpose("Gluon application for reconcile.", PurposeTier::S1);
+        let gaps = lint_purpose("Acme application for reconcile.", PurposeTier::S1);
         assert!(gaps.contains(&GapCode::TooThin));
     }
 
     #[test]
-    fn s1_gluon_create_happy() {
-        let p = "When an operator **creates a Gluon application**, we **save its name, slug, container image, health and load-balancer settings, route prefix, and desired instance count** so **reconcile** can start the right containers and **HAProxy** can route traffic. Gluon operators who manage that app use this record on the applications console—it is not end-user profile data.";
-        assert!(purpose_passes(p, PurposeTier::S1), "{:?}", lint_purpose(p, PurposeTier::S1));
+    fn s1_acme_create_happy() {
+        let p = "When an operator **creates an Acme application**, we **save its name, slug, container image, health and load-balancer settings, route prefix, and desired instance count** so **reconcile** can start the right containers and **HAProxy** can route traffic. Acme operators who manage that app use this record on the applications console—it is not end-user profile data.";
+        assert!(
+            purpose_passes(p, PurposeTier::S1),
+            "{:?}",
+            lint_purpose(p, PurposeTier::S1)
+        );
     }
 
     #[test]
@@ -280,7 +295,11 @@ mod tests {
         );
         assert!(gaps.contains(&GapCode::TestPrefix));
         let ok = "**Test:** Builds a minimal **user** fixture for lepton-auth `tests/account_wipe`, then asserts wipe removed it. CI and developers running the suite only.";
-        assert!(purpose_passes(ok, PurposeTier::S0), "{:?}", lint_purpose(ok, PurposeTier::S0));
+        assert!(
+            purpose_passes(ok, PurposeTier::S0),
+            "{:?}",
+            lint_purpose(ok, PurposeTier::S0)
+        );
     }
 
     #[test]
@@ -297,7 +316,7 @@ mod tests {
             PurposeTier::S3
         );
         assert_eq!(
-            PurposeTier::from_path("gluon/src/applications/service.rs"),
+            PurposeTier::from_path("acme/src/applications/service.rs"),
             PurposeTier::S1
         );
         assert_eq!(

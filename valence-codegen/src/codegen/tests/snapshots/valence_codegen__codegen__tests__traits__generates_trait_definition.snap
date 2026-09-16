@@ -29,6 +29,9 @@ pub struct NamedQueryAll<'a> {
 }
 #[allow(dead_code)]
 impl<'a> NamedQueryAll<'a> {
+    #[deprecated(
+        note = "use query_used with use_!(...) for declared data-use transparency"
+    )]
     pub fn query(valence: &'a valence::Valence) -> Self {
         let tables = valence::TraitRegistry::global().tables_for_trait("Named");
         let table_csv = tables.join(", ");
@@ -93,6 +96,8 @@ impl<'a> std::future::IntoFuture for NamedQueryAll<'a> {
         Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        Box::pin(async move { self.inner.execute(self.valence).await })
+        Box::pin(async move {
+            #[allow(deprecated)] self.inner.execute(self.valence).await
+        })
     }
 }

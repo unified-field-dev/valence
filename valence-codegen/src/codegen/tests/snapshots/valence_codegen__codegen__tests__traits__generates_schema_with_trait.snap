@@ -870,7 +870,9 @@ impl<'a> std::future::IntoFuture for TestTraitAQuery<'a> {
         Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        Box::pin(async move { self.inner.execute(self.valence).await })
+        Box::pin(async move {
+            #[allow(deprecated)] self.inner.execute(self.valence).await
+        })
     }
 }
 /// Schema metadata for #struct_name - zero-heap scalar access
