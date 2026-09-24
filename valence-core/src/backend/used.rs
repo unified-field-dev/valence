@@ -2,6 +2,9 @@
 //!
 //! The trait stays object-safe without purpose args; these wrappers discard purpose
 //! at runtime and forward to the bare port methods for catalog transparency.
+//!
+//! Callers that hold an <code>[Arc]<dyn DatabaseBackend></code> (from
+//! [`crate::runtime::Valence::backend_for_table`]) should pass `backend.as_ref()`.
 
 use crate::data_use::DataUsePurpose;
 use crate::error::Result;
