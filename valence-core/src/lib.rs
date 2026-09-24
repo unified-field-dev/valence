@@ -120,8 +120,8 @@ pub use backend::SqlQueryCompiler;
 #[cfg(feature = "compiler-surreal")]
 pub use backend::SurrealQueryCompiler;
 pub use backend::{
-    create_record_used, delete_record_used, get_record_used, merge_record_used, update_record_used,
-    upsert_record_used, BackendCapabilities, DatabaseBackend,
+    create_record, delete_record, get_record, merge_record, update_record, upsert_record,
+    BackendCapabilities, DatabaseBackend,
 };
 pub use batch::BatchCreatable;
 pub use compiled_query::CompiledQuery;

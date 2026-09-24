@@ -18,8 +18,7 @@ mod surreal_compiler;
 
 pub use port::{BackendCapabilities, DatabaseBackend};
 pub use used::{
-    create_record_used, delete_record_used, get_record_used, merge_record_used, update_record_used,
-    upsert_record_used,
+    create_record, delete_record, get_record, merge_record, update_record, upsert_record,
 };
 
 #[cfg(feature = "compiler-hybrid")]

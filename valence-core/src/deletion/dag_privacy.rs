@@ -35,12 +35,12 @@ pub async fn check_dag_delete_privacy_with_registry(
         ) {
             continue;
         }
-        let Some(existing) = QueryCore::get_record_json_used(
+        let Some(existing) = QueryCore::get_record_json(
             node.table.as_str(),
             node.record_id.as_str(),
             valence,
             DataUsePurpose::new(
-                r#"Before Valence **queues a deletion run**, we **load each cascade target** so Delete privacy can authorize removal under the requesting actor. The deletion prepare path uses this check."#,
+                r"Before Valence **queues a deletion run**, we **load each cascade target** so Delete privacy can authorize removal under the requesting actor. The deletion prepare path uses this check.",
                 file!(),
                 line!(),
             ),

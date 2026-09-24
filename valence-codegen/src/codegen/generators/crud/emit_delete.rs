@@ -10,16 +10,25 @@ pub(super) fn model_delete_method_tokens(cx: &CrudEmitCtx<'_>) -> TokenStream {
     let mark = ownership_mark_pending(cx);
     if cx.deletion_skip {
         return quote! {
-            async fn delete(id: &str, valence: &valence::Valence) -> valence::Result<()> {
-                Self::delete_now(id, valence).await
+            async fn delete(
+                id: &str,
+                valence: &valence::Valence,
+                purpose: valence::DataUsePurpose,
+            ) -> valence::Result<()> {
+                Self::delete_now(id, valence, purpose).await
             }
 
-            async fn delete_now(id: &str, valence: &valence::Valence) -> valence::Result<()> {
+            async fn delete_now(
+                id: &str,
+                valence: &valence::Valence,
+                purpose: valence::DataUsePurpose,
+            ) -> valence::Result<()> {
+                let _ = purpose;
                 let bare = valence::deletion::normalize_record_id_for_deletion(
                     <Self as valence::Model>::table_name(),
                     id,
                 );
-                let before_json = valence::QueryCore::get_record_json_used(
+                let before_json = valence::QueryCore::get_record_json(
                     <Self as valence::Model>::table_name(),
                     &bare,
                     valence,
@@ -81,7 +90,12 @@ pub(super) fn model_delete_method_tokens(cx: &CrudEmitCtx<'_>) -> TokenStream {
     }
 
     quote! {
-        async fn delete(id: &str, valence: &valence::Valence) -> valence::Result<()> {
+        async fn delete(
+            id: &str,
+            valence: &valence::Valence,
+            purpose: valence::DataUsePurpose,
+        ) -> valence::Result<()> {
+            let _ = purpose;
             match valence::deletion::prepare_deletion(
                 Self::table_name(),
                 id,

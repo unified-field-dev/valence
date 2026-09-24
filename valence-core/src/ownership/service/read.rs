@@ -264,10 +264,10 @@ impl OwnershipService {
             .order_by("transferred_at".to_string(), SortDirection::Desc)
             .limit(limit);
         let rows: Vec<Value> = q
-            .execute_used(
+            .execute(
                 &sys,
                 DataUsePurpose::new(
-                    r#"When operators review **ownership transfer history**, we **query those transfer rows** so the timeline of ownership changes for a record can be shown. Platform ownership tooling uses this listing."#,
+                    r"When operators review **ownership transfer history**, we **query those transfer rows** so the timeline of ownership changes for a record can be shown. Platform ownership tooling uses this listing.",
                     file!(),
                     line!(),
                 ),

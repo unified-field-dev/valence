@@ -256,7 +256,7 @@ async fn defer_allows_when_parent_readable_happy() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_hist_ok", "h1", &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_hist_ok", "h1", &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .expect("hist row");
@@ -292,7 +292,7 @@ async fn defer_denies_when_parent_unreadable_sad() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_hist_deny", "h1", &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_hist_deny", "h1", &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .expect("hist row");
@@ -319,7 +319,7 @@ async fn defer_missing_source_denies_sad() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_hist_nosrc", "h1", &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_hist_nosrc", "h1", &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .expect("hist row");
@@ -352,7 +352,7 @@ async fn defer_missing_parent_denies_sad() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_hist_gone", "h1", &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_hist_gone", "h1", &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .expect("hist row");
@@ -386,7 +386,7 @@ async fn defer_always_allow_super_user_happy() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_hist_sys", "h1", &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_hist_sys", "h1", &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .expect("hist row");
@@ -440,7 +440,7 @@ async fn defer_filters_list_sad_and_happy() {
         .unwrap();
 
     for (id, expect_ok) in [("ha", true), ("hb", false)] {
-        let raw = QueryCore::get_record_json_used("defer_hist_list", id, &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+        let raw = QueryCore::get_record_json("defer_hist_list", id, &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
             .await
             .unwrap()
             .expect("row");
@@ -578,7 +578,7 @@ async fn defer_cycle_denies_sad() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_cycle_a", "a1", &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_cycle_a", "a1", &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .unwrap();
@@ -1079,7 +1079,7 @@ async fn defer_depth_exceeded_denies_sad() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_depth_0", "n0", &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_depth_0", "n0", &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .expect("row");
@@ -1133,7 +1133,7 @@ async fn defer_nested_chain_owner_allows_stranger_denies() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_nest_hist", "h1", &owner_v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_nest_hist", "h1", &owner_v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .expect("hist");
@@ -1177,7 +1177,7 @@ async fn defer_system_parent_fetch_does_not_elevate_viewer() {
         .await
         .unwrap();
 
-    let raw = QueryCore::get_record_json_used("defer_sys_hist", "h1", &v, DataUsePurpose::new(r#"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only."#, file!(), line!()))
+    let raw = QueryCore::get_record_json("defer_sys_hist", "h1", &v, DataUsePurpose::new(r"**Test:** Reloads fixture rows by id so the Valence suite can assert presence, absence, or field state after deletion and privacy scenarios. CI and developers running the suite only.", file!(), line!()))
         .await
         .unwrap()
         .expect("hist");

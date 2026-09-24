@@ -187,12 +187,12 @@ async fn tm_s2_apply_remove_edge_clears_edges() {
     let v = mem_valence();
     let from = RecordId::new("proj", "p1");
     let to = RecordId::new("tag", "t1");
-    v.relate_edge_used(
+    v.relate_edge(
         "proj_tag",
         &from,
         &to,
         DataUsePurpose::new(
-            r#"**Test:** Creates a fixture edge so RemoveEdge apply can clear links. CI and developers running the suite only."#,
+            r"**Test:** Creates a fixture edge so RemoveEdge apply can clear links. CI and developers running the suite only.",
             file!(),
             line!(),
         ),

@@ -200,12 +200,12 @@ impl PrivacyEvaluator {
         let sys = v.with_actor(Actor::System {
             operation: "defer_to_edge_parent_fetch".into(),
         });
-        let Some(parent_raw) = QueryCore::get_record_json_used(
+        let Some(parent_raw) = QueryCore::get_record_json(
             parent.table(),
             parent.id(),
             &sys,
             DataUsePurpose::new(
-                r#"When a satellite row **defers read privacy to its parent**, we **load that parent row** so Valence can evaluate the parent's access policy as the viewer. Privacy evaluation uses this load only."#,
+                r"When a satellite row **defers read privacy to its parent**, we **load that parent row** so Valence can evaluate the parent's access policy as the viewer. Privacy evaluation uses this load only.",
                 file!(),
                 line!(),
             ),

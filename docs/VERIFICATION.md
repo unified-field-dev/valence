@@ -35,7 +35,7 @@ Feature slice for connection hop classify, edge bake, and snapshot emit. Covered
 cargo test -p uf-valence-data-use-scan --lib
 ```
 
-Includes hop classify (`get_owner_used` / `relate_to_*` / reverse exclusions) and
+Includes hop classify (`get_owner` / `relate_to_*` / reverse exclusions) and
 `Config::connection_edges` bake of `referenced_schema`.
 
 Skip extended jobs (`package-dry-run`, `examples`, `e2e`, `coverage`, `bench-smoke`,
