@@ -7,6 +7,9 @@
 infra/aws/campaign/instances.env
 profiling/
 
+# Bench reports live in uf-live-cloud-lab/valence/reports/bench/
+/profiling/valence-bench/reports/
+
 # Local Sentrux quality-gate config (dev artifact; not part of upstream)
 .sentrux/
 valence-data-use-scan/purpose_inventory.csv

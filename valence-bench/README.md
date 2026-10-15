@@ -16,7 +16,9 @@ VALENCE_BENCH_CLIENT_INDEX=0 cargo run -p valence-bench --release -- run --exper
   --storage sqlite --duration-secs 30 --concurrency 32 --prefill 10000 --bench-clients 2
 ```
 
-JSON reports: `profiling/valence-bench/reports/{experiment}-{matrix}-{hardware}.json`.
+Runs write JSON reports to `profiling/valence-bench/reports/{experiment}-{matrix}-{hardware}.json`,
+which is gitignored local scratch. Decision-grade AWS JSON is kept in the lab repo
+(uf-live-cloud-lab) under `valence/reports/bench/`.
 
 ## Verify
 
