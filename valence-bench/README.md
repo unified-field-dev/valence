@@ -17,8 +17,7 @@ VALENCE_BENCH_CLIENT_INDEX=0 cargo run -p valence-bench --release -- run --exper
 ```
 
 Runs write JSON reports to `profiling/valence-bench/reports/{experiment}-{matrix}-{hardware}.json`,
-which is gitignored local scratch. Decision-grade AWS JSON is kept in the lab repo
-(uf-live-cloud-lab) under `valence/reports/bench/`.
+which is gitignored local scratch. Decision-grade AWS results aren't committed to this repo.
 
 ## Verify
 
@@ -29,4 +28,4 @@ cargo run -p valence-bench -- run --experiment bm-v0 --storage mem --telemetry o
 cargo test -p valence-bench -- --test-threads=1
 ```
 
-See [PERFORMANCE.md](PERFORMANCE.md). AWS campaign coverage notes may live under `docs/` when present in-tree; full operator scripts are in the lab repo.
+See [PERFORMANCE.md](PERFORMANCE.md). AWS campaign coverage notes may live under `docs/` when present in-tree. AWS campaign tooling is maintained separately and isn't part of this repo.

@@ -7,7 +7,7 @@
 infra/aws/campaign/instances.env
 profiling/
 
-# Bench reports live in uf-live-cloud-lab/valence/reports/bench/
+# Local bench output; decision-grade results aren't kept in this repo
 /profiling/valence-bench/reports/
 
 # Local Sentrux quality-gate config (dev artifact; not part of upstream)
