@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   default does nothing. The mem backend keeps a real equality index for it, and SQLite,
   Postgres and Surreal create one (adding the columns first on a table with no registry
   layout). Wrapping backends should forward it.
+- `indexed: true` on a schema or trait field asks the backend for a lookup index on it.
+  SQL backends create it with the typed table (bump the schema `version` so boot sync adds
+  it to existing tables), and the mem backend indexes `indexed` and `unique` fields when
+  boot sync runs.
 - `Actor::is_service_user()` and `Actor::service_name()`. `RejectExternalSystemActor` is
   renamed to `RejectExternalPrivilegedActor` (old name kept as a deprecated alias).
   Behavior change: the `AUTHENTICATED` privacy rule now allows `Actor::ServiceUser`

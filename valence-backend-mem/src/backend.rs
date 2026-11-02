@@ -420,6 +420,22 @@ impl DatabaseBackend for InMemoryBackend {
         ))
     }
 
+    /// Mem has no tables to create; this only indexes the layout's `indexed` and `unique`
+    /// fields, the ones queries look up by equality. Boot sync calls it through
+    /// [`DatabaseBackend::sync_typed_table`].
+    async fn ensure_typed_table(
+        &self,
+        layout: &valence_core::storage_layout::StorageLayout,
+    ) -> Result<()> {
+        for field in &layout.fields {
+            if (field.indexed || field.unique) && !field.primary_key {
+                self.define_index(&layout.table, &[field.name.as_str()])
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
     /// Builds the index from the rows already stored, then keeps it current on every write.
     async fn define_index(&self, table: &str, fields: &[&str]) -> Result<()> {
         if fields.is_empty() {
@@ -625,6 +641,61 @@ mod tests {
                 .len(),
             plain.execute_compiled_query(&by_model).await.unwrap().len()
         );
+    }
+
+    fn layout_field(
+        name: &str,
+        primary_key: bool,
+        unique: bool,
+        indexed: bool,
+    ) -> valence_core::storage_layout::LayoutField {
+        valence_core::storage_layout::LayoutField {
+            name: name.into(),
+            storage: valence_core::storage_layout::FieldStorage::String,
+            primary_key,
+            nullable: !primary_key,
+            unique,
+            indexed,
+            default: None,
+            record_table: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn typed_table_indexes_indexed_and_unique_fields_happy() {
+        let backend = InMemoryBackend::new();
+        let layout = valence_core::storage_layout::StorageLayout {
+            table: "permission".into(),
+            fields: vec![
+                layout_field("id", true, true, false),
+                layout_field("name", false, false, true),
+                layout_field("email", false, true, false),
+                layout_field("note", false, false, false),
+            ],
+        };
+        backend.sync_typed_table(&layout).await.unwrap();
+        // Idempotent: a second boot sync must not stack duplicate indexes.
+        backend.sync_typed_table(&layout).await.unwrap();
+        {
+            let indexes = backend.indexes.read().unwrap();
+            let list = indexes.get("permission").expect("indexes for permission");
+            assert_eq!(list.len(), 2);
+            assert!(list.iter().any(|i| i.covers(&["name"])));
+            assert!(list.iter().any(|i| i.covers(&["email"])));
+        }
+        for (id, name) in [("p1", "team.view"), ("p2", "team.edit")] {
+            backend
+                .upsert_record("permission", id, serde_json::json!({"name": name}))
+                .await
+                .unwrap();
+        }
+        let q = CompiledQuery::new(
+            "SELECT * FROM permission WHERE name = $n LIMIT 1".into(),
+            vec![("n".into(), serde_json::json!("team.edit"))],
+        );
+        let rows = backend.execute_compiled_query(&q).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["name"], "team.edit");
     }
 
     #[tokio::test]
